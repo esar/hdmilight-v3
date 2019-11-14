@@ -20,22 +20,24 @@
   
 */
 
-#include <inttypes.h>
+#include <stdint.h>
 #include <string.h>
-#include <stdio.h>
-#include <avr/pgmspace.h>
+#include "printf.h"
 #include "ambilight.h"
 
 
 void cmdGetMem(uint8_t argc, char** argv)
 {
+	printf("not implemented\n");
+
+/*
 	if(argc == 2)
 	{
 		uint32_t config = getint(&argv[1]);
 		config += 1;
 		config *= 0x8000;
 
-		printf_P(PSTR("loading config...\n"));
+		printf("loading config...\n");
 		dmaRead(config >> 16, config & 0xffff, 0x8000, 0x8000);
 		printf("done.\n");
 	}
@@ -49,7 +51,7 @@ void cmdGetMem(uint8_t argc, char** argv)
 
 		if(dst != 0)
 		{
-			printf_P(PSTR("copying %04x bytes from %04x%04x to %04x...\n"), len, sec, src, dst);
+			printf("copying %04x bytes from %04x%04x to %04x...\n", len, sec, src, dst);
 			dmaRead(sec, src, dst, len);
 		}
 		else
@@ -57,7 +59,7 @@ void cmdGetMem(uint8_t argc, char** argv)
 			static uint8_t buf[18];
 			uint16_t pos;
 
-			printf_P(PSTR("dumping %04x%04x bytes from %04x...\n"), sec, len, src);
+			printf("dumping %04x%04x bytes from %04x...\n", sec, len, src);
 
 			dst = (uint16_t)(&buf);
 			for(pos = 0; pos < len; pos += 16, src += 16)
@@ -75,4 +77,5 @@ void cmdGetMem(uint8_t argc, char** argv)
 
 		printf("\ndone.\n");
 	}
+*/
 }

@@ -20,17 +20,15 @@
   
 */
 
-#include <inttypes.h>
-#include <avr/io.h>
-#include <avr/pgmspace.h>
+#include <stdint.h>
 #include <string.h>
-#include <stdio.h>
+#include "printf.h"
 #include "ambilight.h"
 
 
 void setColour(uint8_t index, uint8_t row, uint32_t r, uint32_t g, uint32_t b)
 {
-	uint8_t* address = AMBILIGHT_BASE_ADDR_COLOUR;
+	uint16_t address = AMBILIGHT_BASE_ADDR_COLOUR;
 	address += (uint16_t)index * 32;
 	address += row * 8;
 
@@ -40,21 +38,33 @@ void setColour(uint8_t index, uint8_t row, uint32_t r, uint32_t g, uint32_t b)
 	// +-\/+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	// |   |   byte 6      |    byte 5     |    byte 4     |    byte 3     |    byte 2     |    byte 1     |    byte 0     |
 
-	address[0] = address[1] = address[2] = address[3] = address[4] = address[5] = address[6] = address[7] = 0;
-	*((uint32_t*)(address + 0))  = (r & 0x3FFFFUL);
-	*((uint32_t*)(address + 2)) |= (g & 0x3FFFFUL) << 2;
-	*((uint32_t*)(address + 4)) |= (b & 0x3FFFFUL) << 4;
+	uint8_t data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+	uint32_t* rdata = (uint32_t*)data;
+	uint32_t* gdata = (uint32_t*)&data[2];
+	uint32_t* bdata = (uint32_t*)&data[4];
+	*rdata  = (r & 0x3FFFFUL);
+	*gdata |= (g & 0x3FFFFUL) << 2;
+	*bdata |= (b & 0x3FFFFUL) << 4;
+	
+	spiWrite(address, data, sizeof(data));
 }
 
 void getColour(uint8_t index, uint8_t row, uint32_t* r, uint32_t* g, uint32_t* b)
 {
-	uint8_t* address = AMBILIGHT_BASE_ADDR_COLOUR;
+	uint16_t address = AMBILIGHT_BASE_ADDR_COLOUR;
 	address += (uint16_t)index * 32;
 	address += row * 8;
 	
-	*r = *((uint32_t*)(address + 0)) & 0x3FFFFUL;
-	*g = (*((uint32_t*)(address + 2)) >> 2) & 0x3FFFFUL;
-	*b = (*((uint32_t*)(address + 4)) >> 4) & 0x3FFFFUL;
+	uint8_t data[8];
+	uint32_t* rdata = (uint32_t*)data;
+	uint32_t* gdata = (uint32_t*)&data[2];
+	uint32_t* bdata = (uint32_t*)&data[4];
+
+	spiRead(address, data, sizeof(data));
+
+	*r = *rdata & 0x3FFFFUL;
+	*g = (*gdata >> 2) & 0x3FFFFUL;
+	*b = (*bdata >> 4) & 0x3FFFFUL;
 }
 
 void cmdSetColour(uint8_t argc, char** argv)
@@ -102,7 +112,7 @@ void cmdGetColour(uint8_t argc, char** argv)
 
 				getColour(index, row, &r, &g, &b);
 
-				printf_P(PSTR("%d %d: %d.%03d %d.%03d %d.%03d\n"), index, row, 
+				printf("%d %d: %d.%03d %d.%03d %d.%03d\n", index, row, 
 				         fixed_9_9_int(r), fixed_9_9_fract(r, 3),
 				         fixed_9_9_int(g), fixed_9_9_fract(g, 3),
 				         fixed_9_9_int(b), fixed_9_9_fract(b, 3));

@@ -20,11 +20,9 @@
   
 */
 
-#include <inttypes.h>
-#include <avr/io.h>
-#include <avr/pgmspace.h>
+#include <stdint.h>
 #include <string.h>
-#include <stdio.h>
+#include "printf.h"
 #include "ambilight.h"
 
 
@@ -43,31 +41,28 @@ void cmdGetResult(uint8_t argc, char** argv)
 
 		while(repeat--)
 		{
-		index = minIndex;
-		do
-		{
-			uint8_t i;
-			volatile uint8_t* address;
-			int value;
-
-			address = AMBILIGHT_BASE_ADDR_RESULT;
-			address[0] = index;
-
-			address = AMBILIGHT_BASE_ADDR_STATUS;
-			while((address[0] & 1) == 0)
-				asm("nop"); 
-
-			printf_P(PSTR("%d: "), index);
-			for(i = 0; i < 12; ++i)
+			index = minIndex;
+			do
 			{
-				address = AMBILIGHT_BASE_ADDR_RESULT;
-				address += 4 + i;
-				value = *address;
-				printf_P(PSTR("%d "), value);
-			}
-			printf_P(PSTR(" \n"));
+				uint8_t i;
+				uint8_t data;
 
-		} while(index++ < maxIndex);
+				spiWrite(AMBILIGHT_BASE_ADDR_RESULT, &index, sizeof(index));
+
+				do
+				{
+					spiRead(AMBILIGHT_BASE_ADDR_STATUS, &data, sizeof(data));
+				} while((data & 1) == 0);
+
+				printf("%d: ", index);
+				for(i = 0; i < 12; ++i)
+				{
+					spiRead(AMBILIGHT_BASE_ADDR_RESULT + 4 + i, &data, sizeof(data));
+					printf("%d ", data);
+				}
+				printf(" \n");
+
+			} while(index++ < maxIndex);
 		}
 	}
 	//else

@@ -20,11 +20,9 @@
   
 */
 
-#include <inttypes.h>
-#include <avr/io.h>
-#include <avr/pgmspace.h>
+#include <stdint.h>
 #include <string.h>
-#include <stdio.h>
+#include "printf.h"
 #include "ambilight.h"
 
 #define RATIO_FUZZ    (0x100 / 10)
@@ -70,6 +68,7 @@ static uint16_t g_currentHeight = 0xffff;
 
 uint16_t getConfig(uint16_t width, uint16_t height, uint16_t ratio)
 {
+/*
 	FormatConfig config;
 	int offset = 0;
 	
@@ -86,6 +85,7 @@ uint16_t getConfig(uint16_t width, uint16_t height, uint16_t ratio)
 		offset += sizeof(config);
 		
 	} while(config.width != 0);
+*/
 
 	return 0xffff;
 }
@@ -123,26 +123,28 @@ void changeFormat()
 		uint16_t yPreActive;
 		uint16_t yPostActive;
 
-	} __attribute__((packed)) *format = AMBILIGHT_BASE_ADDR_FORMAT;
+	} __attribute__((packed)) format;
+
+	spiRead(AMBILIGHT_BASE_ADDR_FORMAT, &format, sizeof(format));
 
 
-	if(format->xSize < g_currentWidth  - X_RES_FUZZ ||
-	   format->xSize > g_currentWidth  + X_RES_FUZZ ||
-	   format->ySize < g_currentHeight - Y_RES_FUZZ ||
-	   format->ySize > g_currentHeight + Y_RES_FUZZ ||
-	   format->xPreActive  < xMinPreActive  ||
-	   format->xPostActive < xMinPostActive ||
-	   format->yPreActive  < yMinPreActive  ||
-	   format->yPostActive < yMinPostActive)
+	if(format.xSize < g_currentWidth  - X_RES_FUZZ ||
+	   format.xSize > g_currentWidth  + X_RES_FUZZ ||
+	   format.ySize < g_currentHeight - Y_RES_FUZZ ||
+	   format.ySize > g_currentHeight + Y_RES_FUZZ ||
+	   format.xPreActive  < xMinPreActive  ||
+	   format.xPostActive < xMinPostActive ||
+	   format.yPreActive  < yMinPreActive  ||
+	   format.yPostActive < yMinPostActive)
 	{
 		// Either the resolution has changed or the active
 		// area has left the bounding box of the current ratio
 		// so return to the native ratio for the current resolution
 
-		//printf_P(PSTR("reset: %d %d %d   %d %d %d\n"), format->xSize, format->xPreActive, format->xPostActive, format->ySize, format->yPreActive, format->yPostActive);
+		//printf("reset: %d %d %d   %d %d %d\n", format.xSize, format.xPreActive, format.xPostActive, format.ySize, format.yPreActive, format.yPostActive);
 		g_currentRatio   = 0;
-		g_currentWidth   = format->xSize;
-		g_currentHeight  = format->ySize;
+		g_currentWidth   = format.xSize;
+		g_currentHeight  = format.ySize;
 		xMinPreActive  = 0;
 		xMinPostActive = 0;
 		yMinPreActive  = 0;
@@ -150,31 +152,31 @@ void changeFormat()
 		hasChanged     = 1;
 	}
 
-	if(IS_FULLSCREEN(format->xPreActive, format->xPostActive) &&
-	   IS_CENTERED(format->yPreActive, format->yPostActive))
+	if(IS_FULLSCREEN(format.xPreActive, format.xPostActive) &&
+	   IS_CENTERED(format.yPreActive, format.yPostActive))
 	{
-		uint16_t ratio = getRatio(format->xSize - format->xPreActive - format->xPostActive,
-		                          format->ySize - format->yPreActive - format->yPostActive);
+		uint16_t ratio = getRatio(format.xSize - format.xPreActive - format.xPostActive,
+		                          format.ySize - format.yPreActive - format.yPostActive);
 		if(ratio != 0xffff && ratio != g_currentRatio)
 		{
 			g_currentRatio   = ratio;
 			xMinPreActive  = 0;
 			xMinPostActive = 0;
-			yMinPreActive  = format->yPreActive - Y_ACTIVE_FUZZ;
-			yMinPostActive = format->yPostActive - Y_ACTIVE_FUZZ;
+			yMinPreActive  = format.yPreActive - Y_ACTIVE_FUZZ;
+			yMinPostActive = format.yPostActive - Y_ACTIVE_FUZZ;
 			hasChanged     = 1;
 		}
 	}
-	else if(IS_FULLSCREEN(format->yPreActive, format->yPostActive) &&
-	        IS_CENTERED(format->xPreActive, format->xPostActive))
+	else if(IS_FULLSCREEN(format.yPreActive, format.yPostActive) &&
+	        IS_CENTERED(format.xPreActive, format.xPostActive))
 	{
-		uint16_t ratio = getRatio(format->xSize - format->xPreActive - format->xPostActive,
-		                          format->ySize - format->yPreActive - format->yPostActive);
+		uint16_t ratio = getRatio(format.xSize - format.xPreActive - format.xPostActive,
+		                          format.ySize - format.yPreActive - format.yPostActive);
 		if(ratio != 0xffff && ratio != g_currentRatio)
 		{
 			g_currentRatio   = ratio;
-			xMinPreActive  = format->xPreActive - X_ACTIVE_FUZZ;
-			xMinPostActive = format->xPostActive - X_ACTIVE_FUZZ;
+			xMinPreActive  = format.xPreActive - X_ACTIVE_FUZZ;
+			xMinPostActive = format.xPostActive - X_ACTIVE_FUZZ;
 			yMinPreActive  = 0;
 			yMinPostActive = 0;
 			hasChanged     = 1;
@@ -185,15 +187,15 @@ void changeFormat()
 	{
 		uint32_t config;
 
-		//printf_P(PSTR("format changed: %dx%d (%d): "), g_currentWidth, g_currentHeight, g_currentRatio);
-		//printf_P(PSTR("%s\n"), g_ratios[g_currentRatio].name);
+		//printf("format changed: %dx%d (%d): ", g_currentWidth, g_currentHeight, g_currentRatio);
+		//printf("%s\n", g_ratios[g_currentRatio].name);
 			
 		config = getConfig(g_currentWidth, g_currentHeight, g_currentRatio);
 		if(config != 0xffff && g_formatChangeEnabled)
 		{
 			config += 1;
 			config *= 0x8000;
-			dmaRead(config >> 16, config & 0xffff, 0x8000, 0x8000);
+			//dmaRead(config >> 16, config & 0xffff, 0x8000, 0x8000);
 		}
 	}
 }	
@@ -214,9 +216,12 @@ void cmdGetFormat(uint8_t argc, char** argv)
 {
 	if(argc == 1)
 	{
-		uint16_t* address = AMBILIGHT_BASE_ADDR_FORMAT;
-		printf("raw: %d %d %d %d %d %d\n", address[0], address[1], address[2], address[3], address[4], address[5]);
-		printf_P(PSTR("fmt: %dx%d %s (%d)\n"), g_currentWidth, g_currentHeight, 
+		changeFormat();
+
+		uint16_t data[6];
+		spiRead(AMBILIGHT_BASE_ADDR_FORMAT, data, sizeof(data));
+		printf("raw: %d %d %d %d %d %d\n", data[0], data[1], data[2], data[3], data[4], data[5]);
+		printf("fmt: %dx%d %s (%d)\n", g_currentWidth, g_currentHeight, 
 		                                       g_ratios[g_currentRatio].name, g_currentRatio);
 	}
 }

@@ -20,11 +20,9 @@
   
 */
 
-#include <inttypes.h>
-#include <avr/io.h>
-#include <avr/pgmspace.h>
+#include <stdint.h>
 #include <string.h>
-#include <stdio.h>
+#include "printf.h"
 #include "ambilight.h"
 
 
@@ -36,7 +34,7 @@ void cmdGetAddr(uint8_t argc, char** argv)
 		uint8_t  count = getint(&argv[2]);
 
 		while(count--)
-			printf_P(PSTR("%02x "), *addr++);
+			printf("%02x ", *addr++);
 	}
 }
 
