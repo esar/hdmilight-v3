@@ -20,17 +20,15 @@
   
 */
 
-#include <inttypes.h>
-#include <avr/io.h>
-#include <avr/pgmspace.h>
+#include <stdint.h>
 #include <string.h>
-#include <stdio.h>
+#include "printf.h"
 #include "ambilight.h"
 
 	
 void setGamma(uint8_t channel, uint8_t table, uint8_t index, uint8_t value)
 {
-	uint8_t* address = AMBILIGHT_BASE_ADDR_GAMMAR;
+	uint16_t address = AMBILIGHT_BASE_ADDR_GAMMAR;
 
 	if(channel == 0)
 		address = AMBILIGHT_BASE_ADDR_GAMMAR;
@@ -42,7 +40,7 @@ void setGamma(uint8_t channel, uint8_t table, uint8_t index, uint8_t value)
 	address += (uint16_t)table * 256;
 	address += index;
 
-	*address = value;
+	spiWrite(address, &value, sizeof(value));
 }
 
 void cmdGetGamma(uint8_t argc, char** argv)
@@ -64,8 +62,8 @@ void cmdGetGamma(uint8_t argc, char** argv)
 				index = minIndex;
 				do
 				{
-					int value;
-					uint8_t* address = AMBILIGHT_BASE_ADDR_GAMMAR;
+					uint8_t value;
+					uint16_t address = AMBILIGHT_BASE_ADDR_GAMMAR;
 					if(channel == 0)
 						address = AMBILIGHT_BASE_ADDR_GAMMAR;
 					else if(channel == 1)
@@ -75,9 +73,9 @@ void cmdGetGamma(uint8_t argc, char** argv)
 					address += (uint16_t)table * 256;
 					address += index;
 
-					value = *address;
+					spiRead(address, &value, sizeof(value));
 
-					printf_P(PSTR("%d: %d: %d: %d\n"), table, channel, index, value);
+					printf("%d: %d: %d: %d\n", table, channel, index, value);
 
 				} while(index++ < maxIndex);
 				
@@ -89,7 +87,7 @@ void cmdGetGamma(uint8_t argc, char** argv)
 
 void cmdSetGamma(uint8_t argc, char** argv)
 {
-	if(argc == 9)
+	if(argc == 5)
 	{
 		uint8_t value;
 		uint8_t table, maxTable;

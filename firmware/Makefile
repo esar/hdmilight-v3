@@ -1,82 +1,66 @@
-MAX_IMAGE_SIZE = 24576
+OBJS  = main.o         \
+        clock.o        \
+        uart.o         \
+        printf.o       \
+        i2c.o          \
+        spi.o          \
+        fixed_point.o  \
+        cmd_area.o     \
+        cmd_colour.o   \
+        cmd_delay.o    \
+        cmd_format.o   \
+        cmd_gamma.o    \
+        cmd_i2c.o      \
+        cmd_keys.o     \
+        cmd_output.o   \
+        cmd_mem.o      \
+        cmd_addr.o     \
+        cmd_result.o   \
+        cmd_status.o
 
-PRG            = image
-OBJ            = main.o serial.o timer.o i2c.o \
-                 fixed_point.o \
-                 stackmon.o    \
-                 cmd_addr.o    \
-                 cmd_colour.o  \
-                 cmd_delay.o   \
-                 cmd_gamma.o   \
-                 cmd_i2c.o     \
-                 cmd_area.o    \
-                 cmd_output.o  \
-                 cmd_port.o    \
-                 cmd_result.o  \
-                 cmd_status.o  \
-                 cmd_format.o  \
-                 cmd_keys.o    \
-                 cmd_mem.o     \
-                 cmd_stack.o
+OBJS += system_stm32f3xx.o      \
+        startup_stm32f303xe.o
 
-MCU_TARGET     = atmega16
-OPTIMIZE       = -Os
+CMSIS     = ../../STM32Cube_FW_F3_V1.10.0/Drivers/CMSIS/
 
-DEFS           = 
-LIBS           =
+CFLAGS += -c -fno-common -Os -g -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard -std=gnu99
+CFLAGS += -Wall -ffunction-sections -fdata-sections -fno-builtin
+CFLAGS += -Wno-unused-function -ffreestanding
+CFLAGS += -DSTM32F303xE
+LFLAGS  = -Tstm32f303ret.ld -Wl,--gc-sections -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard
+#LFLAGS += -L/usr/lib/arm-none-eabi/newlib/thumb
 
-# You should not have to change anything below here.
+INC     = -I$(CMSIS)/Include/
+INC    += -I$(CMSIS)/Device/ST/STM32F3xx/Include/ -I./
+CFLAGS += $(INC)
 
-CC             = avr-gcc
 
-CFLAGS        = -g -Wall $(OPTIMIZE) -mmcu=$(MCU_TARGET) $(DEFS) -Wl,--defsym=__stack=0x8007ff
-LDFLAGS       = -Wl,-Map,$(PRG).map
+CC      = arm-none-eabi-gcc
+LD      = arm-none-eabi-gcc
+AR      = arm-none-eabi-ar
+AS      = arm-none-eabi-as
+OBJCOPY = arm-none-eabi-objcopy
+OBJDUMP = arm-none-eabi-objdump
+SIZE    = arm-none-eabi-size
 
-# Strip unused code
-CFLAGS += -ffunction-sections -fno-unroll-loops -fno-inline -fno-jump-tables
-LDFLAGS += -Wl,-gc-sections  
 
-#LDFLAGS += --cref -nostartfiles
+all: size flash
 
-OBJCOPY        = avr-objcopy
-OBJDUMP        = avr-objdump
-
-MAKEMEM = ../tools/makemem
-
-all: $(PRG).elf lst text mem
-
-main.o: config_edid.h config_hdmi.h
-
-$(PRG).elf: $(OBJ)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
-
-clean:
-	rm -rf *.o $(PRG).elf
-	rm -rf *.lst *.map *.bin *.lss *.sym *.hex $(EXTRA_CLEAN_FILES)
-
-lst:  $(PRG).lst
-
-%.lst: %.elf
-	$(OBJDUMP) -h -d $< > $@
-
-# Rules for building the .text rom images
-
-text: bin
-
-hex:  $(PRG).hex
-bin:  $(PRG).bin
-mem:  $(PRG).mem
-srec: $(PRG).srec
-
-%.hex: %.elf
-	$(OBJCOPY) -j .text -j .data -O ihex $< $@
-
-%.srec: %.elf
-	$(OBJCOPY) -j .text -j .data -O srec $< $@
+main.elf: $(OBJS)
+	$(LD) $(LFLAGS) -o main.elf $(OBJS)
 
 %.bin: %.elf
-	$(OBJCOPY) -j .text -j .data -O binary $< $@
-	
-%.mem: %.bin
-	$(MAKEMEM) $< $(MAX_IMAGE_SIZE) > $@
+	$(OBJCOPY) --strip-unneeded -O binary $< $@
 
+
+flash: main.bin
+	sudo openocd -f ../hdmilight-v3-openocd.cfg -c "program $^ reset exit 0x08000000"
+
+size: main.elf
+	$(SIZE) $< 
+
+clean:
+	-rm -f $(OBJS) main.lst main.elf main.hex main.map main.bin main.list
+
+
+.PHONY: all flash size clean distclean

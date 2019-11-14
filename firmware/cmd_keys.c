@@ -20,11 +20,9 @@
   
 */
 
-#include <inttypes.h>
-#include <avr/io.h>
-#include <avr/pgmspace.h>
+#include <stdint.h>
 #include <string.h>
-#include <stdio.h>
+#include "printf.h"
 #include "ambilight.h"
 #include "cec.h"
 
@@ -41,20 +39,20 @@ static uint8_t currentAdjust = ADJUST_FIRST;
 
 void adjustUp()
 {
-	uint8_t x = i2cRead(0x44, currentAdjust);
+	uint8_t x = i2cReadAdvRegister(0x44, currentAdjust);
 	x = (int16_t)x + 8 > 255 ? 255 : x + 8;
-	i2cWrite(0x44, currentAdjust, x);
+	i2cWriteAdvRegister(0x44, currentAdjust, x);
 
-	printf_P(PSTR("adjust up: %u\n"), x);
+	printf("adjust up: %u\n", x);
 }
 
 void adjustDown()
 {
-	uint8_t x = i2cRead(0x44, currentAdjust);
+	uint8_t x = i2cReadAdvRegister(0x44, currentAdjust);
 	x = (int16_t)x - 8 < 0 ? 0 : x - 8;
-	i2cWrite(0x44, currentAdjust, x);
+	i2cWriteAdvRegister(0x44, currentAdjust, x);
 
-	printf_P(PSTR("adjust down: %u\n"), x);
+	printf("adjust down: %u\n", x);
 }
 
 void adjustCycle()
@@ -63,7 +61,7 @@ void adjustCycle()
 	if(currentAdjust > ADJUST_LAST)
 		currentAdjust = ADJUST_FIRST;
 
-	printf_P(PSTR("adjust cycle: %02x\n"), currentAdjust);
+	printf("adjust cycle: %02x\n", currentAdjust);
 }
 
 void powerOn()
@@ -71,11 +69,11 @@ void powerOn()
 	uint8_t x;
 
 	// turn off forced free run mode and manual colour selection
-	x = i2cRead(0x44, 0xBF);
+	x = i2cReadAdvRegister(0x44, 0xBF);
 	x &= ~5;
-	i2cWrite(0x44, 0xBF, x);
+	i2cWriteAdvRegister(0x44, 0xBF, x);
 	
-	printf_P(PSTR("power on\n"));
+	printf("power on\n");
 }
 
 void powerOff()
@@ -83,16 +81,16 @@ void powerOff()
 	uint8_t x;
 
 	// set free run colour to black
-	i2cWrite(0x44, 0xC0, 0);
-	i2cWrite(0x44, 0xC1, 0);
-	i2cWrite(0x44, 0xC2, 0);
+	i2cWriteAdvRegister(0x44, 0xC0, 0);
+	i2cWriteAdvRegister(0x44, 0xC1, 0);
+	i2cWriteAdvRegister(0x44, 0xC2, 0);
 
 	// force free run mode with manual colour selection
-	x = i2cRead(0x44, 0xBF);
+	x = i2cReadAdvRegister(0x44, 0xBF);
 	x |= 5;
-	i2cWrite(0x44, 0xBF, x);
+	i2cWriteAdvRegister(0x44, 0xBF, x);
 
-	printf_P(PSTR("power off\n"));
+	printf("power off\n");
 }
 
 void togglePower()
@@ -109,11 +107,12 @@ void processCecMessage()
 {
 	uint8_t i;
 
-	printf_P(PSTR("CEC %u: "), g_cecMessageLength);
+	printf("CEC %u: ", g_cecMessageLength);
 	for(i = 0; i < g_cecMessageLength; ++i)
 		printf("%02x ", g_cecMessage[i]);
 	printf("\n");
 
+/*
 	if(g_cecMessage[1] == CEC_OP_USER_CONTROL_PRESSED)
 	{
 		uint8_t action;
@@ -123,7 +122,7 @@ void processCecMessage()
 		if(action == ACTION_POWER_TOGGLE)
 			togglePower();
 		else if(action == ACTION_CONFIG_CYCLE)
-			printf_P(PSTR("cycle preset\n"));
+			printf("cycle preset\n");
 		else if(action == ACTION_ADJUST_UP)
 			adjustUp();
 		else if(action == ACTION_ADJUST_DOWN)
@@ -136,7 +135,7 @@ void processCecMessage()
 		{
 			uint32_t config = action - ACTION_CONFIG_0;
 
-			printf_P(PSTR("config %lu\n"), config);
+			printf("config %lu\n", config);
 
 			config += 1;
 			config *= 0x8000;
@@ -144,6 +143,7 @@ void processCecMessage()
 			dmaRead(config >> 16, config & 0xffff, 0x8000, 0x8000);
 		}
 	}
+*/
 }
 
 
@@ -162,14 +162,14 @@ void cmdRstKeys(uint8_t argc, char** argv)
 {
 	uint8_t x;
 
-	i2cWrite(0x80, 0x2A, 0x01);	// power up CEC
-	i2cWrite(0x98, 0x96, 63);	// enable all CEC interrupts on INT1
-	i2cWrite(0x98, 0x94, 63);	// clear all CEC interrupts
-	i2cWrite(0x80, 0x28, 0);        // logical address 0 = 0 (TV)
-	//i2cWrite(0x80, 0x77, 1);	// use all CEC RX buffers
+	i2cWriteAdvRegister(0x80, 0x2A, 0x01);	// power up CEC
+	i2cWriteAdvRegister(0x98, 0x96, 63);	// enable all CEC interrupts on INT1
+	i2cWriteAdvRegister(0x98, 0x94, 63);	// clear all CEC interrupts
+	i2cWriteAdvRegister(0x80, 0x28, 0);        // logical address 0 = 0 (TV)
+	//i2cWriteAdvRegister(0x80, 0x77, 1);	// use all CEC RX buffers
 
-	x = i2cRead(0x44, 0x3E);        // enable colour adjustment controls
+	x = i2cReadAdvRegister(0x44, 0x3E);        // enable colour adjustment controls
 	x |= 0x80;
-	i2cWrite(0x44, 0x3E, x);
+	i2cWriteAdvRegister(0x44, 0x3E, x);
 }
 

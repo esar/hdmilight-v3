@@ -28,7 +28,7 @@ struct ConfigTable
 
 };
 
-static const struct ConfigTable g_configTablePreEdid[] PROGMEM = 
+static const struct ConfigTable g_configTablePreEdid[] = 
 {
 
 	{ 0x98, 0xF4, 0x80 },  // CEC
@@ -44,7 +44,7 @@ static const struct ConfigTable g_configTablePreEdid[] PROGMEM =
 	{ 0x00 }
 };
 
-static const struct ConfigTable g_configTablePostEdid[] PROGMEM = 
+static const struct ConfigTable g_configTablePostEdid[] = 
 {
 	{ 0x64, 0x77, 0x00 },  // Set the Most Significant Bit of the SPA location to 0
 	{ 0x64, 0x52, 0x20 },  // Set the SPA for port B.

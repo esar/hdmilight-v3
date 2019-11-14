@@ -20,11 +20,9 @@
   
 */
 
-#include <inttypes.h>
-#include <avr/io.h>
-#include <avr/pgmspace.h>
+#include <stdint.h>
 #include <string.h>
-#include <stdio.h>
+#include "printf.h"
 #include "ambilight.h"
 
 
@@ -35,16 +33,20 @@ void cmdGetDelay(uint8_t argc, char** argv)
 		int frames;
 		uint32_t ticks;
 		uint32_t temporalSmoothingRatio;
-		uint8_t* address = (uint8_t*)AMBILIGHT_BASE_ADDR_DELAY;
-		frames = address[0];
-		ticks  = address[1];
-		ticks  = (ticks << 8) | address[2]; 
-		ticks  = (ticks << 8) | address[3];
-		ticks /= 16;
-		temporalSmoothingRatio = address[4];
-		temporalSmoothingRatio = (temporalSmoothingRatio << 8) | address[5];
+		uint16_t address = AMBILIGHT_BASE_ADDR_DELAY;
+		uint8_t data[6];
 
-		printf_P(PSTR("%d %ld %d.%03d\n"), frames, ticks, 
+		spiRead(address, data, sizeof(data));
+
+		frames = data[0];
+		ticks  = data[1];
+		ticks  = (ticks << 8) | data[2]; 
+		ticks  = (ticks << 8) | data[3];
+		ticks /= 16;
+		temporalSmoothingRatio = data[4];
+		temporalSmoothingRatio = (temporalSmoothingRatio << 8) | data[5];
+
+		printf("%d %ld %d.%03d\n", frames, ticks, 
 		         fixed_9_9_int(temporalSmoothingRatio), fixed_9_9_fract(temporalSmoothingRatio, 3));
 	}
 }
@@ -56,22 +58,27 @@ void cmdSetDelay(uint8_t argc, char** argv)
 		uint8_t frames = getint(&argv[1]);
 		uint32_t ticks = getint(&argv[2]);
 		uint32_t temporalSmoothingRatio = getfixed_9_9(argv[3]);
-		uint8_t* address = (uint8_t*)AMBILIGHT_BASE_ADDR_DELAY;
+		uint16_t address = AMBILIGHT_BASE_ADDR_DELAY;
+		uint8_t data[6];
 
-		address[0] = frames;
+		data[0] = frames;
 
 		ticks *= 16;
-		address[1] = 0;
-		address[2] = ticks >> 8;
-		address[3] = ticks & 0xff;
+		data[1] = 0;
+		data[2] = ticks >> 8;
+		data[3] = ticks & 0xff;
 
-		address[4] = temporalSmoothingRatio >> 8;
-		address[5] = temporalSmoothingRatio & 0xff;
+		data[4] = temporalSmoothingRatio >> 8;
+		data[5] = temporalSmoothingRatio & 0xff;
+
+		spiWrite(address, data, sizeof(data));
 	}
 }
 
 void cmdRstDelay(uint8_t argc, char** argv)
 {
-	memset(AMBILIGHT_BASE_ADDR_DELAY, 0, 8); 
+	uint8_t data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+
+	spiWrite(AMBILIGHT_BASE_ADDR_DELAY, data, sizeof(data));
 }
 

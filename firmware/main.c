@@ -21,14 +21,13 @@
 */
 
 #include <inttypes.h>
-#include <avr/io.h>
-#include <avr/pgmspace.h>
-#include <avr/interrupt.h>
 #include <string.h>
-#include <stdio.h>
+#include <stm32f303x8.h>
+#include <core_cm4.h>
+#include "printf.h"
 #include "ambilight.h"
-#include "serial.h"
-#include "i2c.h"
+#include "clock.h"
+#include "uart.h"
 
 
 // If this line is commented out, the ADV7611 will not be started
@@ -49,6 +48,7 @@ volatile uint8_t g_cecMessage[16];
 volatile uint8_t g_cecMessageLength;
 
 
+/*
 ISR(_VECTOR(1))
 {
 	g_formatChanged = 1;
@@ -78,9 +78,11 @@ ISR(_VECTOR(2))
 		i2cWrite(0x98, 0x94, 0x08);
 	}
 }
+*/
 
 void idle()
 {
+/*
 #ifdef ENABLE_POWER_SWITCH
 	static uint8_t debounceValue = 0;
 	static uint8_t debounceTicks = 0;
@@ -120,6 +122,7 @@ void idle()
 		debounceTicks = 0;
 	}
 #endif // ENABLE_POWER_SWITCH
+*/
 }
 
 // Print a section of the ring buffer to stdout, wrapping around when passing the end.
@@ -130,9 +133,9 @@ void ringBufPrint(char* buf, uint8_t pos, int len)
 	while(len--)
 	{
 		if(buf[pos] == '\0')
-			fputc(' ', stdout);
+			_putchar(' ');
 		else
-			fputc(buf[pos], stdout);
+			_putchar(buf[pos]);
 		++pos;
 	}
 }
@@ -164,7 +167,7 @@ char readcmd(char** argv, char maxargs)
 
 	while(1)
 	{
-		int c = serial_getchar();
+		int c = _getchar();
 		if(c == -1)
 		{
 			idle();
@@ -174,11 +177,11 @@ char readcmd(char** argv, char maxargs)
 		switch(c)
 		{
 			case 0x1B:
-				while((c = serial_getchar()) == -1)
+				while((c = _getchar()) == -1)
 					;
 				if(c == '[')
 				{
-					while((c = serial_getchar()) == -1)
+					while((c = _getchar()) == -1)
 						;
 					switch(c)
 					{
@@ -194,10 +197,10 @@ char readcmd(char** argv, char maxargs)
 				if(pos - 1 != current)
 				{
 					--pos;
-					printf_P(PSTR("\x1B[D")); // move left
+					printf("\x1B[D"); // move left
 				}
 				else
-					serial_putchar(BELL);
+					_putchar(BELL);
 				break;
 			case 0x08: // backspace
 			case 0x7f:
@@ -208,24 +211,24 @@ char readcmd(char** argv, char maxargs)
 					--pos; --end;
 
 					// move cursor left one place and print the partial line
-					printf_P(PSTR("\x1B[D"));
+					printf("\x1B[D");
 					ringBufPrint(cmdbuf, pos, end - pos);
 
 					// move the cursor left, back to the edit position
-					printf_P(PSTR(" \x1B[%dD"), end - pos + 1);
+					printf(" \x1B[%dD", end - pos + 1);
 				}
 				else
-					serial_putchar(BELL);
+					_putchar(BELL);
 				break;
 			RIGHT:
 			case 0x06: // right
 				if(pos + 1 != end)
 				{
 					++pos;
-					printf_P(PSTR("\x1B[C")); // move right
+					printf("\x1B[C"); // move right
 				}
 				else
-					serial_putchar(BELL);
+					_putchar(BELL);
 				break;
 			case '\n':
 			case '\r':
@@ -257,21 +260,21 @@ char readcmd(char** argv, char maxargs)
 						cmdbuf[current + len] = '\0';
 
 						// move the cursor to the beginning of the line and print the copied line
-						printf_P(PSTR(" \x1B[%dD"), pos - current);
+						printf(" \x1B[%dD", pos - current);
 						ringBufPrint(cmdbuf, current + 1, len - 1);
 
 						// if the copied line is shorter then overwrite any extra characters with spaces
 						if(end - (current + len) > 0)
 						{
 							for(i = 0; i < end - (current + len); ++i)
-								serial_putchar(' ');
-							printf_P(PSTR("\x1B[%dD"), end - (current + len));
+								_putchar(' ');
+							printf("\x1B[%dD", end - (current + len));
 						}
 						end = current + len;
 						pos = end;
 					}
 					else
-						serial_putchar(BELL);
+						_putchar(BELL);
 				}
 				break;
 			DOWN:
@@ -299,15 +302,15 @@ char readcmd(char** argv, char maxargs)
 					cmdbuf[current + len] = '\0';
 
 					// move the cursor to the beginning of the line and print the copied line
-					printf_P(PSTR(" \x1B[%dD"), pos - current);
+					printf(" \x1B[%dD", pos - current);
 					ringBufPrint(cmdbuf, current + 1, len - 1);
 
 					// if the copied line is shorter then overwrite the extra characters with spaces
 					if(end - (current + len) > 0)
 					{
 						for(i = 0; i < end - (current + len); ++i)
-							serial_putchar(' ');
-						printf_P(PSTR("\x1B[%dD"), end - (current + len));
+							_putchar(' ');
+						printf("\x1B[%dD", end - (current + len));
 					}
 					end = current + len;
 					pos = end;
@@ -316,7 +319,7 @@ char readcmd(char** argv, char maxargs)
 				{
 				}
 				else
-					serial_putchar(BELL);
+					_putchar(BELL);
 				break;
 			default:
 				if(end + 1 != current)
@@ -331,13 +334,13 @@ char readcmd(char** argv, char maxargs)
 					ringBufPrint(cmdbuf, pos, end - pos + 1);
 
 					// move the cursor back to the edit point
-					printf_P(PSTR(" \x1B[%dD"), end - pos + 1);
+					printf(" \x1B[%dD", end - pos + 1);
 					++pos;
 					++end;
 
 				}
 				else
-					serial_putchar(BELL);
+					_putchar(BELL);
 				break;
 		}
 	}
@@ -455,58 +458,38 @@ void cmdRstAll(uint8_t argc, char** argv)
 	cmdRstDelay(argc, argv);
 }
 
-const char cmdBlankUsage[] PROGMEM = "";
-const char cmdGetAreaUsage[] PROGMEM   = "Get Area:    GA index";
-const char cmdSetAreaUsage[] PROGMEM   = "Set Area:    SA index xmin xmax ymin ymax shift output";
-const char cmdRstAreaUsage[] PROGMEM   = "Rst Area:    RA";
-const char cmdGetAddrUsage[] PROGMEM   = "Get Address: GX addr count";
-const char cmdSetAddrUsage[] PROGMEM   = "Set Address: SX addr byte0 [byte1] [...]";
-const char cmdGetColourUsage[] PROGMEM = "Get Colour:  GC index row";
-const char cmdSetColourUsage[] PROGMEM = "Set Colour:  SC index row r g b";
-const char cmdRstColourUsage[] PROGMEM = "Rst Colour:  RC";
-const char cmdGetDelayUsage[] PROGMEM  = "Get Delay:   GD";
-const char cmdSetDelayUsage[] PROGMEM  = "Set Delay:   SD num_frames num_ticks smooth_ratio";
-const char cmdRstDelayUsage[] PROGMEM  = "Rst Delay:   RD";
-const char cmdDisFormatUsage[] PROGMEM = "Dis Format:  DF";
-const char cmdEnaFormatUsage[] PROGMEM = "Ena Format:  EF";
-const char cmdGetFormatUsage[] PROGMEM = "Get Format:  GF";
-const char cmdGetGammaUsage[] PROGMEM  = "Get Gamma:   GG table channel index";
-const char cmdSetGammaUsage[] PROGMEM  = "Set Gamma:   SG table channel index value";
-const char cmdRstGammaUsage[] PROGMEM  = "Rst Gamma:   RG";
-const char cmdGetI2CUsage[] PROGMEM    = "Get I2C:     GI addr sub_addr [bit_range]";
-const char cmdSetI2CUsage[] PROGMEM    = "Set I2C:     SI addr sub_addr value";
-const char cmdRstI2CUsage[] PROGMEM    = "Rst I2C:     RI";
-const char cmdSetKeysUsage[] PROGMEM   = "Set Keys:    SK key_code";
-const char cmdRstKeysUsage[] PROGMEM   = "Rst Keys:    RK";
-const char cmdGetMemUsage[] PROGMEM    = "Get Memory:  GM index";
-const char cmdGetOutputUsage[] PROGMEM = "Get Output:  GO output light";
-const char cmdSetOutputUsage[] PROGMEM = "Set Output:  SO output light area coef gamma enable";
-const char cmdRstOutputUsage[] PROGMEM = "Rst Output:  RO";
-const char cmdGetPortUsage[] PROGMEM   = "Get Port:    GP addr";
-const char cmdSetPortUsage[] PROGMEM   = "Set Port:    SP addr value";
-const char cmdGetResultUsage[] PROGMEM = "Get Result:  GR index";
-const char cmdGetStatusUsage[] PROGMEM = "Get Status:  GS";
-const char cmdGetStackUsage[] PROGMEM  = "Get Stack:   GZ";
-const char cmdRstAllUsage[] PROGMEM    = "Rst All:     R";
+const char cmdBlankUsage[] = "";
+const char cmdGetAreaUsage[]   = "Get Area:    GA index";
+const char cmdSetAreaUsage[]   = "Set Area:    SA index xmin xmax ymin ymax shift output";
+const char cmdRstAreaUsage[]   = "Rst Area:    RA";
+const char cmdGetAddrUsage[]   = "Get Address: GX addr count";
+const char cmdSetAddrUsage[]   = "Set Address: SX addr byte0 [byte1] [...]";
+const char cmdGetColourUsage[] = "Get Colour:  GC index row";
+const char cmdSetColourUsage[] = "Set Colour:  SC index row r g b";
+const char cmdRstColourUsage[] = "Rst Colour:  RC";
+const char cmdGetDelayUsage[]  = "Get Delay:   GD";
+const char cmdSetDelayUsage[]  = "Set Delay:   SD num_frames num_ticks smooth_ratio";
+const char cmdRstDelayUsage[]  = "Rst Delay:   RD";
+const char cmdDisFormatUsage[] = "Dis Format:  DF";
+const char cmdEnaFormatUsage[] = "Ena Format:  EF";
+const char cmdGetFormatUsage[] = "Get Format:  GF";
+const char cmdGetGammaUsage[]  = "Get Gamma:   GG table channel index";
+const char cmdSetGammaUsage[]  = "Set Gamma:   SG table channel index value";
+const char cmdRstGammaUsage[]  = "Rst Gamma:   RG";
+const char cmdGetI2CUsage[]    = "Get I2C:     GI addr sub_addr [bit_range]";
+const char cmdSetI2CUsage[]    = "Set I2C:     SI addr sub_addr value";
+const char cmdRstI2CUsage[]    = "Rst I2C:     RI";
+const char cmdSetKeysUsage[]   = "Set Keys:    SK key_code";
+const char cmdRstKeysUsage[]   = "Rst Keys:    RK";
+const char cmdGetMemUsage[]    = "Get Memory:  GM index";
+const char cmdGetOutputUsage[] = "Get Output:  GO output light";
+const char cmdSetOutputUsage[] = "Set Output:  SO output light area coef gamma enable";
+const char cmdRstOutputUsage[] = "Rst Output:  RO";
+const char cmdGetResultUsage[] = "Get Result:  GR index";
+const char cmdGetStatusUsage[] = "Get Status:  GS";
+const char cmdGetStackUsage[]  = "Get Stack:   GZ";
+const char cmdRstAllUsage[]    = "Rst All:     R";
 
-void dmaRead(uint8_t section, uint16_t src, uint16_t dst, uint16_t len)
-{
-	section += 6;
-	if(section < 6)
-		section = 6;
-
-	DMA_FLASH_ADDR_H = section;
-	DMA_FLASH_ADDR_M = src >> 8;
-	DMA_FLASH_ADDR_L = src & 0xff;
-	DMA_SRAM_ADDR_H = dst >> 8;
-	DMA_SRAM_ADDR_L = dst & 0xff;
-	DMA_LEN_H = len >> 8;
-	DMA_LEN_L = len & 0xff;
-
-	cli();
-	DMA_START = 0;
-	sei();
-}
 
 int main()
 {
@@ -514,7 +497,7 @@ int main()
 	{
 		const char* cmd;
 		void (*handler)(uint8_t argc, char** argv);
-		PGM_P usage;
+		const char* usage;
 
 	} cmds[] = 
 	{
@@ -542,13 +525,10 @@ int main()
 		{ "GO", cmdGetOutput, cmdGetOutputUsage },
 		{ "SO", cmdSetOutput, cmdSetOutputUsage },
 		{ "RO", cmdRstOutput, cmdRstOutputUsage },
-		{ "GP", cmdGetPort,   cmdGetPortUsage   },
-		{ "SP", cmdSetPort,   cmdSetPortUsage   },
 		{ "GR", cmdGetResult, cmdGetResultUsage },
 		{ "GS", cmdGetStatus, cmdGetStatusUsage },
 		{ "GX", cmdGetAddr,   cmdGetAddrUsage   },
 		{ "SX", cmdSetAddr,   cmdSetAddrUsage   },
-		{ "GZ", cmdGetStack,  cmdGetStackUsage  },
 		{ "R",  cmdRstAll,    cmdRstAllUsage    },
 	};
 
@@ -556,35 +536,46 @@ int main()
 	char* argv[12];
 	int argc;
 
-	serial_init();
+	clockInit();
+
+	uartInit(115200);
+
+	// Enable LED power
+	RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
+	GPIOC->MODER |= 1 << (1 * 2);
+	GPIOC->BSRR |= 1 << 1;
+
+	printf("Starting...\r\n");
 	
 	// Wait a short while
 	for(i = 0; i < 10000; ++i)
 		asm volatile ("nop");
 
-	i2c_init();
+	i2cInit();
+
+	spiInit();
 
 #ifdef AUTO_INITIALIZATION
-	silent = 1;
-	argv[0] = "R";
-	cmdRstAll(1, argv);
-	silent = 0;
+	//silent = 1;
+	//argv[0] = "R";
+	//cmdRstAll(1, argv);
+	//silent = 0;
 #endif
 
-	sei();
 
+	printf("Entering main loop\r\n");
 	while (1)
 	{
-		printf_P(PSTR("\n> "));
+		printf("\n> ");
 		argc = readcmd(argv, 12);
-		printf_P(PSTR("\n"));
+		printf("\n");
 
 		if(argc > 0)
 		{
 			if(strcmp(argv[0], "?") == 0)
 			{
 				for(i = 0; i < sizeof(cmds) / sizeof(*cmds); ++i)
-					printf_P(PSTR("%S\n"), cmds[i].usage);
+					printf("%s\n", cmds[i].usage);
 				continue;
 			}
 
@@ -593,7 +584,7 @@ int main()
 				if(strcmp(argv[0], cmds[i].cmd) == 0)
 				{
 					if(argc == 2 && strcmp(argv[1], "?") == 0)
-						printf_P(PSTR("%S\n"), cmds[i].usage);
+						printf("%s\n", cmds[i].usage);
 					else
 						cmds[i].handler(argc, argv);
 					break;

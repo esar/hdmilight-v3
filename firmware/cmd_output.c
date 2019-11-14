@@ -20,11 +20,9 @@
   
 */
 
-#include <inttypes.h>
-#include <avr/io.h>
-#include <avr/pgmspace.h>
+#include <stdint.h>
 #include <string.h>
-#include <stdio.h>
+#include "printf.h"
 #include "ambilight.h"
 
 
@@ -36,27 +34,30 @@ void setOutput(uint8_t output, uint16_t light, uint8_t area, uint8_t coef, uint8
 	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	// |               |               |
 
-	uint8_t* address = AMBILIGHT_BASE_ADDR_OUTPUT;
+	uint16_t address = AMBILIGHT_BASE_ADDR_OUTPUT;
 	address += (uint16_t)output * 1024;
 	address += light * 2;
 
 	if(enabled)
 		enabled = 0x80;
 
-	address[0] = area & 0xff;
-	address[1] = enabled | ((coef & 15) << 3) | (gamma & 7);
+	uint8_t data[2] = { area & 0xff, enabled | ((coef & 15) << 3) | (gamma & 7) };
+	spiWrite(address, data, sizeof(data));
 }
 
 void getOutput(uint8_t output, uint16_t light, int* area, int* coef, int* gamma, int* enabled)
 {
-	uint8_t* address = AMBILIGHT_BASE_ADDR_OUTPUT;
+	uint16_t address = AMBILIGHT_BASE_ADDR_OUTPUT;
 	address += (uint16_t)output * 1024;
 	address += light * 2;
 
-	*area = address[0];
-	*gamma = address[1] & 7;
-	*coef = (address[1] >> 3) & 15;
-	*enabled = address[1] & 0x80;
+	uint8_t data[2];
+	spiRead(address, data, sizeof(data));
+
+	*area = data[0];
+	*gamma = data[1] & 7;
+	*coef = (data[1] >> 3) & 15;
+	*enabled = data[1] & 0x80;
 }
 
 void cmdSetOutput(uint8_t argc, char** argv)
@@ -105,7 +106,7 @@ void cmdGetOutput(uint8_t argc, char** argv)
 
 				getOutput(output, light, &area, &coef, &gamma, &enabled);
 
-				printf_P(PSTR("%d: %d: %d %d %d %d\n"), output, light, area, coef, gamma, enabled);
+				printf("%d: %d: %d %d %d %d\n", output, light, area, coef, gamma, enabled);
 				
 			} while(light++ < maxLight);
 			

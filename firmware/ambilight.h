@@ -38,16 +38,16 @@
 #define PIND     _SFR_IO8(0x2a)
 #define PORTD    _SFR_IO8(0x2b)
 
-#define AMBILIGHT_BASE_ADDR_OUTPUT ((void*)0x8000)
-#define AMBILIGHT_BASE_ADDR_COLOUR ((void*)0xa000)
-#define AMBILIGHT_BASE_ADDR_AREA   ((void*)0xb000)
-#define AMBILIGHT_BASE_ADDR_GAMMAR ((void*)0xc000)
-#define AMBILIGHT_BASE_ADDR_GAMMAG ((void*)0xc800)
-#define AMBILIGHT_BASE_ADDR_GAMMAB ((void*)0xd000)
-#define AMBILIGHT_BASE_ADDR_RESULT ((void*)0xd800)
-#define AMBILIGHT_BASE_ADDR_STATUS ((void*)0xe000)
-#define AMBILIGHT_BASE_ADDR_DELAY  ((void*)0xe800)
-#define AMBILIGHT_BASE_ADDR_FORMAT ((void*)0xf000)
+#define AMBILIGHT_BASE_ADDR_OUTPUT 0x0000
+#define AMBILIGHT_BASE_ADDR_COLOUR 0x2000
+#define AMBILIGHT_BASE_ADDR_AREA   0x3000
+#define AMBILIGHT_BASE_ADDR_GAMMAR 0x4000
+#define AMBILIGHT_BASE_ADDR_GAMMAG 0x4800
+#define AMBILIGHT_BASE_ADDR_GAMMAB 0x5000
+#define AMBILIGHT_BASE_ADDR_RESULT 0x5800
+#define AMBILIGHT_BASE_ADDR_STATUS 0x6000
+#define AMBILIGHT_BASE_ADDR_DELAY  0x6800
+#define AMBILIGHT_BASE_ADDR_FORMAT 0x7000
 
 #define DMA_FLASH_ADDR_H    _SFR_IO8(0x2c)
 #define DMA_FLASH_ADDR_M    _SFR_IO8(0x2d)
@@ -100,8 +100,13 @@ int fixed_9_9_int(int32_t x);
 
 void dmaRead(uint8_t section, uint16_t src, uint16_t dst, uint16_t len);
 
-uint8_t i2cRead(uint8_t addr, uint8_t subaddr);
-void i2cWrite(uint8_t addr, uint8_t subaddr, uint8_t value);
+void i2cInit();
+uint8_t i2cReadAdvRegister(uint8_t addr, uint8_t subaddr);
+uint8_t i2cWriteAdvRegister(uint8_t addr, uint8_t subaddr, uint8_t value);
+
+void spiInit();
+void spiWrite(uint16_t address, void* data, uint16_t length);
+void spiRead(uint16_t address, void* data, uint16_t length);
 
 void changeFormat();
 

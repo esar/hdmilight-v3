@@ -1,6 +1,6 @@
 /*
 
-   Copyright (C) 2013 Stephen Robinson
+   Copyright (C) 2019 Stephen Robinson
   
    This file is part of HDMI-Light
   
@@ -20,179 +20,130 @@
   
 */
 
-#include <avr/io.h>
+#include <stdint.h>
+#include <stm32f303xe.h>
+#include <core_cm4.h>
+#include "printf.h"
+#include "ambilight.h"
 
-#define I2C_PORT_DIR    _SFR_IO8(0x29)
-#define I2C_PORT_IN     _SFR_IO8(0x2a)
-#define I2C_PORT_OUT    _SFR_IO8(0x2b)
 
-#define I2C_CLK_PIN     7
-#define I2C_DAT_PIN     6
-
-#define I2C_CLK_HIGH()    I2C_PORT_DIR &= ~(1 << I2C_CLK_PIN); I2C_PORT_OUT |= (1 << I2C_CLK_PIN)
-#define I2C_CLK_LOW()     I2C_PORT_DIR |= (1 << I2C_CLK_PIN); I2C_PORT_OUT &= ~(1 << I2C_CLK_PIN)
-#define I2C_CLK_READ()    ((I2C_PORT_IN & (1 << I2C_CLK_PIN)) ? 1 : 0)
-#define I2C_DAT_HIGH()    I2C_PORT_DIR &= ~(1 << I2C_DAT_PIN); I2C_PORT_OUT |= (1 << I2C_DAT_PIN)
-#define I2C_DAT_LOW()     I2C_PORT_DIR |= (1 << I2C_DAT_PIN); I2C_PORT_OUT &= ~(1 << I2C_DAT_PIN)
-#define I2C_DAT_READ()    ((I2C_PORT_IN & (1 << I2C_DAT_PIN)) ? 1 : 0)
-
-static __attribute__((noinline)) void delay_quarter_bit()
+void i2cInit()
 {
-	// call 3-clocks, lpm 3-clocks, ret 4-clocks = 10 clocks = 0.625uS @ 16MHz
-	asm volatile ("nop");
+	// Configure pins
+	// PA9  = SCL
+	// PA10 = SDA
+
+	// Enable GPIOA
+	RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
+
+	// Set pins mode to alternate function
+	GPIOA->MODER &= ~(GPIO_MODER_MODER9 | GPIO_MODER_MODER10);
+	GPIOA->MODER |= (2 << GPIO_MODER_MODER9_Pos) | (2 << GPIO_MODER_MODER10_Pos);
+
+	// Set alternate function to I2C2
+	// PA9  = I2C2_SCL = Alt Func 4
+	// PA10 = I2C2_SDA = Alt Func 4
+	GPIOA->AFR[1] &= ~(GPIO_AFRH_AFRH1 | GPIO_AFRH_AFRH2);
+	GPIOA->AFR[1] |= (4 << GPIO_AFRH_AFRH1_Pos) | (4 << GPIO_AFRH_AFRH2_Pos);
+
+	// Set pin mode to open drain
+	GPIOA->OTYPER |= (1 << 9) | (1 << 10);
+
+		
+	// Enable I2C2 Clock
+	RCC->APB1ENR |= RCC_APB1ENR_I2C2EN;
+
+	// Disable I2C2 for configuration
+	I2C2->CR1 &= ~I2C_CR1_PE;
+
+	I2C2->CR1 = 0;
+	I2C2->CR2 = 0;
+	I2C2->ICR |= 0xffff;
+	I2C2->TIMINGR = (0x01 << I2C_TIMINGR_PRESC_Pos) |
+	                (0xC9 << I2C_TIMINGR_SCLL_Pos) |
+	                (0x03 << I2C_TIMINGR_SCLH_Pos) |
+	                (0x01 << I2C_TIMINGR_SDADEL_Pos) |
+	                (0x03 << I2C_TIMINGR_SCLDEL_Pos);
+
+	// Enable I2C2
+	I2C2->CR1 |= I2C_CR1_PE;
+	
+
 }
 
-static __attribute__((noinline)) void delay_half_bit()
+void i2cStart()
 {
-	// call 3-clocks, 4xlpm 12-clocks, nop 1-clock, ret 4-clocks = 20 clocks = 1.25uS @ 16MHz
-	asm volatile ("lpm");
-	asm volatile ("nop");
-}
-
-void i2c_init()
-{
-	I2C_PORT_DIR &= (1 << I2C_CLK_PIN) | (1 << I2C_DAT_PIN);
-	I2C_PORT_OUT &= (1 << I2C_CLK_PIN) | (1 << I2C_DAT_PIN);
-}
-
-unsigned char i2c_start()
-{
-	// start with clock and data high
-	I2C_CLK_HIGH();
-	I2C_DAT_HIGH();
-	delay_half_bit();
-
-	// ensure no one else has the bus (clock should remain high)
-	if(!I2C_CLK_READ())
-		return 1;
-
-	// pull data low
-	I2C_DAT_LOW();
-	delay_half_bit();
-
-	// pull clock low
-	I2C_CLK_LOW();
-	delay_half_bit();
-
-	//return data to high
-	I2C_DAT_HIGH();
-	delay_half_bit();
-
-	delay_half_bit();
-	delay_half_bit();
-
-	return 0;
-}
-
-void i2c_stop()
-{
-	//start with clock and data low
-	I2C_CLK_LOW();
-	I2C_DAT_LOW();
-	delay_half_bit();
-	delay_half_bit();
-
-	// return clock to high
-	I2C_CLK_HIGH();
-	while(!I2C_CLK_READ())
+	I2C2->CR2 |= I2C_CR2_START;
+	while(I2C2->CR2 & I2C_CR2_START)
 		;
-	delay_half_bit();
-
-	// return data to high
-	I2C_DAT_HIGH();
-	delay_half_bit();
-	delay_half_bit();
 }
 
-unsigned char i2c_write(unsigned char x)
+void i2cStop()
 {
-	unsigned char i;
-
-	for(i = 0; i < 8; ++i)
-	{
-		if(x & 0x80)
-		{
-			I2C_DAT_HIGH();
-		}
-		else
-		{
-			I2C_DAT_LOW();
-		}
-		x <<= 1;
-
-		delay_quarter_bit();
-		I2C_CLK_HIGH();
-		while(!I2C_CLK_READ())
-			;
-		delay_half_bit();
-		I2C_CLK_LOW();
-		delay_quarter_bit();
-	}
-
-	// now read ack bit
-	I2C_DAT_HIGH();
-	delay_quarter_bit();
-	I2C_CLK_HIGH();
-	while(!I2C_CLK_READ())
+	I2C2->CR2 |= I2C_CR2_STOP;
+	while(I2C2->ISR & I2C_CR2_STOP)
 		;
-	delay_half_bit();
-	x = I2C_DAT_READ();
-	I2C_CLK_LOW();
-	delay_quarter_bit();
-
-	return x;
 }
 
-unsigned char i2c_read()
+void i2cWrite(uint8_t x)
 {
-	unsigned char i;
-	unsigned char x = 0;
-
-for(i = 0; i < 16; ++i)
-	delay_half_bit();
-
-	for(i = 0; i < 8; ++i)
-	{
-		delay_quarter_bit();
-		I2C_CLK_HIGH();
-		while(!I2C_CLK_READ())
-			;
-		delay_half_bit();
-		x = (x << 1) | I2C_DAT_READ();
-		I2C_CLK_LOW();
-		delay_quarter_bit();
-	}
-
-for(i = 0; i < 16; ++i)
-	delay_half_bit();
-
-	// Send NACK
-	I2C_DAT_LOW();
-	delay_quarter_bit();
-	I2C_CLK_HIGH();
-	while(!I2C_CLK_READ())
+	while(!(I2C2->ISR & I2C_ISR_TXIS))
 		;
-	delay_half_bit();
-	I2C_CLK_LOW();
-	delay_quarter_bit();
 
-	return x;
+	I2C2->TXDR = x;
+
+	while(!(I2C2->ISR & (I2C_ISR_TXIS | I2C_ISR_TC)))
+		;
 }
 
-void i2c_ack(unsigned char x)
+uint8_t i2cRead()
 {
-	if(x)
-	{
-		I2C_DAT_HIGH();
-	}
+	while(!(I2C2->ISR & I2C_ISR_RXNE))
+		;
+	return I2C2->RXDR & 0xff;
+}
+
+uint8_t i2cReadAdvRegister(uint8_t addr, uint8_t subaddr)
+{
+	uint8_t result;
+
+	while(I2C2->ISR & I2C_ISR_BUSY)
+		;
+
+	I2C2->CR2 &= ~(I2C_CR2_SADD | I2C_CR2_NBYTES | I2C_CR2_RD_WRN);
+	I2C2->CR2 |= (addr << I2C_CR2_SADD_Pos) | (1 << I2C_CR2_NBYTES_Pos);
+	i2cStart();
+	i2cWrite(subaddr);
+
+	I2C2->CR2 &= ~I2C_CR2_NBYTES;
+	I2C2->CR2 |= 1 << I2C_CR2_NBYTES_Pos;
+	I2C2->CR2 |= I2C_CR2_RD_WRN;
+	i2cStart();
+
+	result = i2cRead();
+
+	i2cStop();
+
+	return result;	
+}
+
+uint8_t i2cWriteAdvRegister(uint8_t addr, uint8_t subaddr, uint8_t value)
+{
+	while(I2C2->ISR & I2C_ISR_BUSY)
+		;
+
+	I2C2->ICR |= I2C_ICR_STOPCF | I2C_ICR_NACKCF;
+
+	I2C2->CR2 &= ~(I2C_CR2_SADD | I2C_CR2_NBYTES | I2C_CR2_RD_WRN);
+	I2C2->CR2 |= (addr << I2C_CR2_SADD_Pos) | (2 << I2C_CR2_NBYTES_Pos);
+	i2cStart();
+	i2cWrite(subaddr);
+	i2cWrite(value);
+	i2cStop();
+
+	if(I2C2->ISR & I2C_ISR_NACKF)
+		return 0;
 	else
-	{
-		I2C_DAT_LOW();
-	}
-	delay_quarter_bit();
-	I2C_CLK_HIGH();
-	delay_half_bit();
-	I2C_CLK_LOW();
-	delay_quarter_bit();
+		return 1;
 }
 

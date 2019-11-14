@@ -20,11 +20,9 @@
   
 */
 
-#include <inttypes.h>
-#include <avr/io.h>
-#include <avr/pgmspace.h>
+#include <stdint.h>
 #include <string.h>
-#include <stdio.h>
+#include "printf.h"
 #include "ambilight.h"
 
 
@@ -34,8 +32,8 @@ void cmdSetPort(uint8_t argc, char** argv)
 	{
 		unsigned char addr = getint(&argv[1]);
 		unsigned char val  = getint(&argv[2]);
-		_SFR_IO8(addr) = val;
-		printf_P(PSTR("OK\n"));
+		//_SFR_IO8(addr) = val;
+		printf("OK\n");
 	}
 	//else
 		//printf("err: SP addr value\n");
@@ -46,8 +44,8 @@ void cmdGetPort(uint8_t argc, char** argv)
 	if(argc == 2)
 	{
 		unsigned char addr = getint(&argv[1]);
-		unsigned char val = _SFR_IO8(addr);
-		printf_P(PSTR("%d=%d\n"), (int)addr, (int)val);
+		unsigned char val = 0; //_SFR_IO8(addr);
+		printf("%d=%d\n", (int)addr, (int)val);
 	}
 	//else
 		//printf("err: GP addr\n");
