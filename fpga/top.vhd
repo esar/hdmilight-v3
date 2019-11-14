@@ -50,24 +50,39 @@ entity HdmilightTop is
 
 		ADV_INT1 : in std_logic;
 
-		ADV_RST : out std_logic;
+		ADV_RST : inout std_logic;  -- must be inout for tristate 'Z' to work
 
 		MCU_I2C_SCL : inout std_logic;
 		MCU_I2C_SDA : inout std_logic;
 
 		MCU_SPI_CLK  : in std_logic;
-		MCU_SPI_MISO : out std_logic;
+		MCU_SPI_MISO : inout std_logic;
 		MCU_SPI_MOSI : in std_logic;
 		MCU_SPI_CS   : in std_logic;
 
-		OUTPUT : out std_logic_vector(7 downto 0);
+		LED_OUT : out std_logic_vector(7 downto 0);
+		LED_CLK : out std_logic_vector(7 downto 0);
 
 		FLASH_CK : out std_logic;
 		FLASH_CS : out std_logic;
 		FLASH_SI : out std_logic;
 		FLASH_SO : in  std_logic;
 
-		GPIO : inout std_logic_vector(3 downto 0)
+		MCU_PD2 : inout std_logic;
+		MCU_PB5 : inout std_logic;
+		MCU_PB8 : inout std_logic;
+
+		VIVEPOS_SENSOR : in std_logic_vector(3 downto 0);
+
+		PAPIX_POS : in std_logic_vector(1 downto 0);
+		PAPIX_RGB : out std_logic_vector(1 downto 0);
+
+		IN5V : in std_logic_vector(1 downto 0);
+		OUT5V : out std_logic_vector(1 downto 0);
+
+		GPIO : inout std_logic_vector(7 downto 0);
+		
+		ROUTE_UNDER : inout std_logic_vector(5 downto 0)
 	);
 end HdmilightTop;
 
@@ -215,11 +230,33 @@ end process;
 --AMBILIGHT_CFG_ADDR <= '0' & MASTER_ADDR(14 downto 0);
 --AMBILIGHT_CFG_WE   <= MASTER_WE(0) and MASTER_ADDR(15);
 
-ADV_RST <= '1';
-OUTPUT <= driverOutput;
+ADV_RST <= 'Z';
+LED_OUT <= driverOutput;
+LED_OUT <= (others => 'Z');
+LED_CLK <= (others => 'Z');
+FLASH_CK <= '0';
+FLASH_CS <= '0';
+FLASH_SI <= '0';
 
-ADV_SCL <= MCU_I2C_SCL;
-ADV_SDA <= MCU_I2C_SDA;
+OUT5V <= (others => '0');
+PAPIX_RGB <= (others => '0');
+
+ADV_SCL <= 'Z';
+ADV_SDA <= 'Z';
+MCU_I2C_SCL <= 'Z';
+MCU_I2C_SDA <= 'Z';
+
+MCU_PD2 <= 'Z';
+MCU_PB5 <= 'Z';
+MCU_PB8 <= 'Z';
+
+GPIO(0) <= MCU_SPI_CLK;
+GPIO(1) <= MCU_SPI_CS;
+GPIO(2) <= MCU_SPI_MOSI;
+GPIO(3) <= MCU_SPI_MISO;
+GPIO(7 downto 4) <= AMBILIGHT_CFG_DOUT(3 downto 0);
+
+ROUTE_UNDER <= (others => 'Z');
 
 vidclk <= ADV_LLC;
 
