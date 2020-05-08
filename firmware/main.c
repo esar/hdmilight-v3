@@ -28,6 +28,7 @@
 #include "ambilight.h"
 #include "clock.h"
 #include "uart.h"
+#include "papix/pos_sensors.h"
 
 
 // If this line is commented out, the ADV7611 will not be started
@@ -47,6 +48,7 @@ volatile uint8_t g_formatChanged = 0;
 volatile uint8_t g_cecMessage[16];
 volatile uint8_t g_cecMessageLength;
 
+int __errno;
 
 /*
 ISR(_VECTOR(1))
@@ -154,45 +156,57 @@ void ringBufCopyReverse(char* buf, uint8_t dst, uint8_t src, int len)
 		buf[--dst] = buf[--src];
 }
 
-char readcmd(char** argv, char maxargs)
+#define ESCAPE_STATE_NONE    0
+#define ESCAPE_STATE_BRACKET 1
+#define ESCAPE_STATE_CHAR    2
+
+#define UP    0x100
+#define DOWN  0x101
+#define RIGHT 0x102
+#define LEFT  0x103
+
+char pollCommand(char** argv, char maxargs)
 {
 	static char cmdbuf[256] = {0, 0};
 	static unsigned char current = 0;
+	static unsigned char history = 0;
+	static unsigned char pos = 1;
+	static unsigned char end = 1;
+	static uint8_t escapeState = ESCAPE_STATE_NONE;
 
-	unsigned char history = 0;
-	unsigned char pos = current + 1;
-	unsigned char end = current + 1;
-	unsigned char arg;
-
-
-	while(1)
+	int c = _getchar();
+	if(c == -1)
+		return 0;
+	
+	switch(escapeState)
 	{
-		int c = _getchar();
-		if(c == -1)
-		{
-			idle();
-			continue;
-		}
+		case ESCAPE_STATE_NONE:
+			if(c == 0x1B)
+				escapeState = ESCAPE_STATE_BRACKET;
+			break;
+		case ESCAPE_STATE_BRACKET:
+			if(c == '[')
+				escapeState = ESCAPE_STATE_CHAR;
+			else
+				escapeState = ESCAPE_STATE_NONE;
+			break;
+		case ESCAPE_STATE_CHAR:
+			switch(c)
+			{
+				case 'A': c = UP;    break;
+				case 'B': c = DOWN;  break;
+				case 'C': c = RIGHT; break;
+				case 'D': c = LEFT;  break;
+			}
+			escapeState = ESCAPE_STATE_NONE;
+			break;
+	}
 
+	if(escapeState == ESCAPE_STATE_NONE)
+	{
 		switch(c)
 		{
-			case 0x1B:
-				while((c = _getchar()) == -1)
-					;
-				if(c == '[')
-				{
-					while((c = _getchar()) == -1)
-						;
-					switch(c)
-					{
-						case 'A': goto UP;
-						case 'B': goto DOWN;
-						case 'C': goto RIGHT;
-						case 'D': goto LEFT;
-					}
-				}
-				break;
-			LEFT:
+			case LEFT:
 			case 0x02: // left
 				if(pos - 1 != current)
 				{
@@ -220,7 +234,7 @@ char readcmd(char** argv, char maxargs)
 				else
 					_putchar(BELL);
 				break;
-			RIGHT:
+			case RIGHT:
 			case 0x06: // right
 				if(pos + 1 != end)
 				{
@@ -232,8 +246,8 @@ char readcmd(char** argv, char maxargs)
 				break;
 			case '\n':
 			case '\r':
-				goto DONE;
-			UP:
+				break;
+			case UP:
 			case 0x10:
 				if(1)
 				{
@@ -244,6 +258,7 @@ char readcmd(char** argv, char maxargs)
 					for(i = 0; i < history + 1; ++i)
 					{
 						len = cmdbuf[p];
+printf("len: %d\n", len);
 						if(len == 0)
 							break;
 						p -= len;
@@ -277,7 +292,7 @@ char readcmd(char** argv, char maxargs)
 						_putchar(BELL);
 				}
 				break;
-			DOWN:
+			case DOWN:
 			case 0x0E:
 				if(history > 1)
 				{
@@ -345,48 +360,58 @@ char readcmd(char** argv, char maxargs)
 		}
 	}
 
-DONE:
-	// if the current line wraps around the end of the buffer then rotate the
-	// buffer so that the line is all in one piece
-	if(end < current)
+	if(c == '\n' || c == '\r')
 	{
-		uint8_t offset = 0x100 - current;
-		ringBufCopyReverse(cmdbuf, end + offset, end, 0x100);
-		pos += offset;
-		end += offset;
-		current += offset;
+		unsigned char arg;
+
+		// if the current line wraps around the end of the buffer then rotate the
+		// buffer so that the line is all in one piece
+		if(end < current)
+		{
+			uint8_t offset = 0x100 - current;
+			ringBufCopyReverse(cmdbuf, end + offset, end, 0x100);
+			pos += offset;
+			end += offset;
+			current += offset;
+		}
+
+		// NULL terminate the current line
+		cmdbuf[end] = '\0';
+
+		// split the line into args
+		pos = current + 1;
+		for(arg = 0; arg < maxargs; ++arg)
+		{
+			if(pos == end)
+				break; 
+
+			while((cmdbuf[pos] == ' ' || cmdbuf[pos] == '\0') && pos != end)
+				cmdbuf[pos++] = '\0';
+
+			argv[arg] = cmdbuf + pos;
+
+			while(cmdbuf[pos] != ' ' && cmdbuf[pos] != '\0' && pos != end)
+				++pos;
+		}
+		
+		// account for added NULL termination of the line
+		++end;
+
+		// store the length of the line for history navigation
+		cmdbuf[end] = end - current;
+
+		// setup ready for the next line
+		cmdbuf[end + 1] = '\0';
+		current = end;
+		
+		history = 0;
+		pos = current + 1;
+		end = current + 1;
+
+		return arg;
 	}
 
-	// NULL terminate the current line
-	cmdbuf[end] = '\0';
-
-	// split the line into args
-	pos = current + 1;
-	for(arg = 0; arg < maxargs; ++arg)
-	{
-		if(pos == end)
-			break; 
-
-		while((cmdbuf[pos] == ' ' || cmdbuf[pos] == '\0') && pos != end)
-			cmdbuf[pos++] = '\0';
-
-		argv[arg] = cmdbuf + pos;
-
-		while(cmdbuf[pos] != ' ' && cmdbuf[pos] != '\0' && pos != end)
-			++pos;
-	}
-	
-	// account for added NULL termination of the line
-	++end;
-
-	// store the length of the line for history navigation
-	cmdbuf[end] = end - current;
-
-	// setup ready for the next line
-	cmdbuf[end + 1] = '\0';
-	current = end;
-	
-	return arg;
+	return 0;
 }
 
 int getint(char** str)
@@ -458,81 +483,83 @@ void cmdRstAll(uint8_t argc, char** argv)
 	cmdRstDelay(argc, argv);
 }
 
-const char cmdBlankUsage[] = "";
-const char cmdGetAreaUsage[]   = "Get Area:    GA index";
-const char cmdSetAreaUsage[]   = "Set Area:    SA index xmin xmax ymin ymax shift output";
-const char cmdRstAreaUsage[]   = "Rst Area:    RA";
-const char cmdGetAddrUsage[]   = "Get Address: GX addr count";
-const char cmdSetAddrUsage[]   = "Set Address: SX addr byte0 [byte1] [...]";
-const char cmdGetColourUsage[] = "Get Colour:  GC index row";
-const char cmdSetColourUsage[] = "Set Colour:  SC index row r g b";
-const char cmdRstColourUsage[] = "Rst Colour:  RC";
-const char cmdGetDelayUsage[]  = "Get Delay:   GD";
-const char cmdSetDelayUsage[]  = "Set Delay:   SD num_frames num_ticks smooth_ratio";
-const char cmdRstDelayUsage[]  = "Rst Delay:   RD";
-const char cmdDisFormatUsage[] = "Dis Format:  DF";
-const char cmdEnaFormatUsage[] = "Ena Format:  EF";
-const char cmdGetFormatUsage[] = "Get Format:  GF";
-const char cmdGetGammaUsage[]  = "Get Gamma:   GG table channel index";
-const char cmdSetGammaUsage[]  = "Set Gamma:   SG table channel index value";
-const char cmdRstGammaUsage[]  = "Rst Gamma:   RG";
-const char cmdGetI2CUsage[]    = "Get I2C:     GI addr sub_addr [bit_range]";
-const char cmdSetI2CUsage[]    = "Set I2C:     SI addr sub_addr value";
-const char cmdRstI2CUsage[]    = "Rst I2C:     RI";
-const char cmdSetKeysUsage[]   = "Set Keys:    SK key_code";
-const char cmdRstKeysUsage[]   = "Rst Keys:    RK";
-const char cmdGetMemUsage[]    = "Get Memory:  GM index";
-const char cmdGetOutputUsage[] = "Get Output:  GO output light";
-const char cmdSetOutputUsage[] = "Set Output:  SO output light area coef gamma enable";
-const char cmdRstOutputUsage[] = "Rst Output:  RO";
-const char cmdGetResultUsage[] = "Get Result:  GR index";
-const char cmdGetStatusUsage[] = "Get Status:  GS";
-const char cmdGetStackUsage[]  = "Get Stack:   GZ";
-const char cmdRstAllUsage[]    = "Rst All:     R";
+const struct
+{
+	const char* cmd;
+	void (*handler)(uint8_t argc, char** argv);
+	const char* usage;
 
+} cmds[] = 
+{
+	{ "GA", cmdGetArea,   "Get Area:    GA index"   },
+	{ "SA", cmdSetArea,   "Set Area:    SA index xmin xmax ymin ymax shift output"   },
+	{ "RA", cmdRstArea,   "Rst Area:    RA"   },
+	{ "GC", cmdGetColour, "Get Colour:  GC index row" },
+	{ "SC", cmdSetColour, "Set Colour:  SC index row r g b" },
+	{ "RC", cmdRstColour, "Rst Colour:  RC" },
+	{ "GD", cmdGetDelay,  "Get Delay:   GD"  },
+	{ "SD", cmdSetDelay,  "Set Delay:   SD num_frames num_ticks smooth_ratio"  },
+	{ "RD", cmdRstDelay,  "Rst Delay:   RD"  },
+	{ "DF", cmdDisFormat, "Dis Format:  DF" },
+	{ "EF", cmdEnaFormat, "Ena Format:  EF" },
+	{ "GF", cmdGetFormat, "Get Format:  GF" },
+	{ "GG", cmdGetGamma,  "Get Gamma:   GG table channel index"  },
+	{ "SG", cmdSetGamma,  "Set Gamma:   SG table channel index value"  },
+	{ "RG", cmdRstGamma,  "Rst Gamma:   RG"  },
+	{ "GI", cmdGetI2C,    "Get I2C:     GI addr sub_addr [bit_range]"    },
+	{ "SI", cmdSetI2C,    "Set I2C:     SI addr sub_addr value"    },
+	{ "RI", cmdRstI2C,    "Rst I2C:     RI"    },
+	{ "SK", cmdSetKeys,   "Set Keys:    SK key_code"   },
+	{ "RK", cmdRstKeys,   "Rst Keys:    RK"   },
+	{ "GM", cmdGetMem,    "Get Memory:  GM index"    },
+	{ "GO", cmdGetOutput, "Get Output:  GO output light" },
+	{ "SO", cmdSetOutput, "Set Output:  SO output light area coef gamma enable" },
+	{ "RO", cmdRstOutput, "Rst Output:  RO" },
+	{ "GR", cmdGetResult, "Get Result:  GR index" },
+	{ "GS", cmdGetStatus, "Get Status:  GS" },
+	{ "GX", cmdGetAddr,   "Get Address: GX addr count"   },
+	{ "SX", cmdSetAddr,   "Set Address: SX addr byte0 [byte1] [...]"  },
+	{ "R",  cmdRstAll,    "Rst All:     R"    },
+};
+
+void dispatchCommand(int argc, char** argv)
+{
+	int i;
+
+	if(argc > 0)
+	{
+		if(strcmp(argv[0], "?") == 0)
+		{
+			for(i = 0; i < sizeof(cmds) / sizeof(*cmds); ++i)
+				printf("%s\n", cmds[i].usage);
+		}
+		else
+		{
+			for(i = 0; i < sizeof(cmds) / sizeof(*cmds); ++i)
+			{
+				if(strcmp(argv[0], cmds[i].cmd) == 0)
+				{
+					if(argc == 2 && strcmp(argv[1], "?") == 0)
+						printf("%s\n", cmds[i].usage);
+					else
+						cmds[i].handler(argc, argv);
+					break;
+				}
+			}
+
+			if(i >= sizeof(cmds) / sizeof(*cmds))
+				printf("err\n");
+		}
+	}
+
+}
 
 int main()
 {
-	const struct
-	{
-		const char* cmd;
-		void (*handler)(uint8_t argc, char** argv);
-		const char* usage;
-
-	} cmds[] = 
-	{
-		{ "GA", cmdGetArea,   cmdGetAreaUsage   },
-		{ "SA", cmdSetArea,   cmdSetAreaUsage   },
-		{ "RA", cmdRstArea,   cmdRstAreaUsage   },
-		{ "GC", cmdGetColour, cmdGetColourUsage },
-		{ "SC", cmdSetColour, cmdSetColourUsage },
-		{ "RC", cmdRstColour, cmdRstColourUsage },
-		{ "GD", cmdGetDelay,  cmdGetDelayUsage  },
-		{ "SD", cmdSetDelay,  cmdSetDelayUsage  },
-		{ "RD", cmdRstDelay,  cmdRstDelayUsage  },
-		{ "DF", cmdDisFormat, cmdDisFormatUsage },
-		{ "EF", cmdEnaFormat, cmdEnaFormatUsage },
-		{ "GF", cmdGetFormat, cmdGetFormatUsage },
-		{ "GG", cmdGetGamma,  cmdGetGammaUsage  },
-		{ "SG", cmdSetGamma,  cmdSetGammaUsage  },
-		{ "RG", cmdRstGamma,  cmdRstGammaUsage  },
-		{ "GI", cmdGetI2C,    cmdGetI2CUsage    },
-		{ "SI", cmdSetI2C,    cmdSetI2CUsage    },
-		{ "RI", cmdRstI2C,    cmdRstI2CUsage    },
-		{ "SK", cmdSetKeys,   cmdSetKeysUsage   },
-		{ "RK", cmdRstKeys,   cmdRstKeysUsage   },
-		{ "GM", cmdGetMem,    cmdGetMemUsage    },
-		{ "GO", cmdGetOutput, cmdGetOutputUsage },
-		{ "SO", cmdSetOutput, cmdSetOutputUsage },
-		{ "RO", cmdRstOutput, cmdRstOutputUsage },
-		{ "GR", cmdGetResult, cmdGetResultUsage },
-		{ "GS", cmdGetStatus, cmdGetStatusUsage },
-		{ "GX", cmdGetAddr,   cmdGetAddrUsage   },
-		{ "SX", cmdSetAddr,   cmdSetAddrUsage   },
-		{ "R",  cmdRstAll,    cmdRstAllUsage    },
-	};
-
 	int i;
+	sensor_angle_set_t* angles;
+
+
 	char* argv[12];
 	int argc;
 
@@ -555,6 +582,8 @@ int main()
 
 	spiInit();
 
+	posSensorsInit();
+
 #ifdef AUTO_INITIALIZATION
 	//silent = 1;
 	//argv[0] = "R";
@@ -562,39 +591,77 @@ int main()
 	//silent = 0;
 #endif
 
+uint8_t printit=0;
 
 	printf("Entering main loop\r\n");
-	while (1)
+	printf("\n> ");
+	while(1)
 	{
-		printf("\n> ");
-		argc = readcmd(argv, 12);
-		printf("\n");
-
-		if(argc > 0)
+		if((argc = pollCommand(argv, 12)))
 		{
-			if(strcmp(argv[0], "?") == 0)
-			{
-				for(i = 0; i < sizeof(cmds) / sizeof(*cmds); ++i)
-					printf("%s\n", cmds[i].usage);
-				continue;
-			}
-
-			for(i = 0; i < sizeof(cmds) / sizeof(*cmds); ++i)
-			{
-				if(strcmp(argv[0], cmds[i].cmd) == 0)
-				{
-					if(argc == 2 && strcmp(argv[1], "?") == 0)
-						printf("%s\n", cmds[i].usage);
-					else
-						cmds[i].handler(argc, argv);
-					break;
-				}
-			}
-
-			if(i >= sizeof(cmds) / sizeof(*cmds))
-				printf("err\n");
+			printf("\n");
+			dispatchCommand(argc, argv);
+			printf("\n> ");
+printit=1;
 		}
 
+		if((angles = posSensorsPoll()))
+		{
+/*
+printf("angles0: %f %f %f %f\n", (*angles)[0][0][0], (*angles)[0][0][1], (*angles)[0][1][0], (*angles)[0][1][1]);
+printf("angles1: %f %f %f %f\n", (*angles)[1][0][0], (*angles)[1][0][1], (*angles)[1][1][0], (*angles)[1][1][1]);
+printf("angles2: %f %f %f %f\n", (*angles)[2][0][0], (*angles)[2][0][1], (*angles)[2][1][0], (*angles)[2][1][1]);
+printf("angles3: %f %f %f %f\n", (*angles)[3][0][0], (*angles)[3][0][1], (*angles)[3][1][0], (*angles)[3][1][1]);
+printf("\n");
+*/
+//printf("got angles\n");
+			ootx_msg_t* ootx = posSensorsGetOotx();
+			if(ootx)
+			{
+//printf("got ootx\n");
+if(printit)
+{
+				lighthouse_solution_t solution;
+				solveLighthouse(&solution, *angles, ootx);
+static int count = 0;
+//if(count++ % 100 == 0)
+{
+solution_error_t error;
+
+	printf("L:%u,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n", 0,
+	       (float)solution.lighthouses[0].origin[0],
+	       (float)solution.lighthouses[0].origin[1],
+	       (float)solution.lighthouses[0].origin[2],
+	       (float)solution.lighthouses[0].rotationMatrix[0],
+	       (float)solution.lighthouses[0].rotationMatrix[1],
+	       (float)solution.lighthouses[0].rotationMatrix[2],
+	       (float)solution.lighthouses[0].rotationMatrix[3],
+	       (float)solution.lighthouses[0].rotationMatrix[4],
+	       (float)solution.lighthouses[0].rotationMatrix[5],
+	       (float)solution.lighthouses[0].rotationMatrix[6],
+	       (float)solution.lighthouses[0].rotationMatrix[7],
+	       (float)solution.lighthouses[0].rotationMatrix[8]);
+	printf("L:%u,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n", 1,
+	       (float)solution.lighthouses[1].origin[0],
+	       (float)solution.lighthouses[1].origin[1],
+	       (float)solution.lighthouses[1].origin[2],
+	       (float)solution.lighthouses[1].rotationMatrix[0],
+	       (float)solution.lighthouses[1].rotationMatrix[1],
+	       (float)solution.lighthouses[1].rotationMatrix[2],
+	       (float)solution.lighthouses[1].rotationMatrix[3],
+	       (float)solution.lighthouses[1].rotationMatrix[4],
+	       (float)solution.lighthouses[1].rotationMatrix[5],
+	       (float)solution.lighthouses[1].rotationMatrix[6],
+	       (float)solution.lighthouses[1].rotationMatrix[7],
+	       (float)solution.lighthouses[1].rotationMatrix[8]);
+	calcSolutionErrorFromSensorAngles(&solution, *angles, &error);
+	printf("err: %f vs %f\r\n", solution.lighthouses[0].error.total, error.total);
+printit=0;
+}
+}
+			}
+
+		}
 	}
 }
 

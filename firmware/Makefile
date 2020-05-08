@@ -18,6 +18,9 @@ OBJS  = main.o         \
         cmd_result.o   \
         cmd_status.o
 
+OBJS += papix/pos_sensors.o     \
+        papix/position.o
+
 OBJS += system_stm32f3xx.o      \
         startup_stm32f303xe.o
 
