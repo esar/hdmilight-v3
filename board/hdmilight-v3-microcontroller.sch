@@ -4,7 +4,7 @@ EELAYER 30 0
 EELAYER END
 $Descr A4 11693 8268
 encoding utf-8
-Sheet 8 8
+Sheet 7 8
 Title "HDMI Light V3 - Microcontroller"
 Date "2019-10-29"
 Rev "3.0"
@@ -111,8 +111,6 @@ Wire Wire Line
 	3950 2300 4100 2300
 Wire Wire Line
 	3950 2400 4100 2400
-Text HLabel 4100 4200 2    50   Input ~ 0
-POS_SENSOR0
 Text HLabel 4100 4500 2    50   Input ~ 0
 POS_SENSOR1
 Text HLabel 4100 4700 2    50   Input ~ 0
@@ -318,8 +316,6 @@ Text HLabel 2450 3600 0    50   Input ~ 0
 MCU_D2
 Wire Wire Line
 	2450 3600 2550 3600
-Text HLabel 4100 4300 2    50   Input ~ 0
-MCU_PB5
 Text HLabel 4100 4600 2    50   Input ~ 0
 MCU_PB8
 Wire Wire Line
@@ -382,7 +378,7 @@ U 1 1 603074F8
 P 2150 2100
 F 0 "SW1" H 2150 2385 50  0000 C CNN
 F 1 "SW_Push" H 2150 2294 50  0000 C CNN
-F 2 "Button_Switch_SMD:SW_SPST_B3S-1000" H 2150 2300 50  0001 C CNN
+F 2 "Button_Switch_SMD:SW_SPST_EVQP0" H 2150 2300 50  0001 C CNN
 F 3 "~" H 2150 2300 50  0001 C CNN
 	1    2150 2100
 	1    0    0    -1  
@@ -398,7 +394,6 @@ NoConn ~ 3950 3200
 NoConn ~ 3950 2800
 NoConn ~ 3950 2700
 NoConn ~ 3950 2600
-NoConn ~ 3950 2500
 NoConn ~ 3950 2200
 NoConn ~ 2550 4200
 NoConn ~ 2550 4300
@@ -489,4 +484,12 @@ F 3 "~" H 5950 2300 50  0001 C CNN
 	-1   0    0    -1  
 $EndComp
 NoConn ~ 2550 3800
+Wire Wire Line
+	3950 2500 4100 2500
+Text HLabel 4100 2500 2    50   Input ~ 0
+SPI_NSS
+Text HLabel 4100 4300 2    50   Input ~ 0
+POS_SENSOR0
+Text HLabel 4100 4200 2    50   Input ~ 0
+JRST
 $EndSCHEMATC

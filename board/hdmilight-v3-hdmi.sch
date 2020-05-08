@@ -1297,19 +1297,11 @@ Wire Wire Line
 	2250 1300 2400 1300
 Wire Wire Line
 	2400 1300 2400 950 
-Wire Wire Line
-	2400 950  2450 950 
 Connection ~ 2400 1300
 Wire Wire Line
 	2400 1300 2550 1300
-Text GLabel 2450 950  2    50   Input ~ 0
-HDMI_5V
-Wire Wire Line
-	3800 1250 3900 1250
 Wire Wire Line
 	3800 1250 3800 1400
-Text GLabel 3900 1250 2    50   Input ~ 0
-HDMI_5V
 $Comp
 L Transistor_FET:BSS123 Q3
 U 1 1 5F34DBE4
@@ -1337,14 +1329,14 @@ L Device:R R60
 U 1 1 5F362495
 P 5850 4050
 F 0 "R60" V 6057 4050 50  0000 C CNN
-F 1 "1K" V 5966 4050 50  0000 C CNN
+F 1 "2K2" V 5966 4050 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric" V 5780 4050 50  0001 C CNN
 F 3 "~" H 5850 4050 50  0001 C CNN
 	1    5850 4050
 	0    -1   -1   0   
 $EndComp
 Wire Wire Line
-	6000 4050 6100 4050
+	6000 4050 6200 4050
 Wire Wire Line
 	5600 4050 5700 4050
 Wire Wire Line
@@ -1384,7 +1376,7 @@ HDMI_DVDDIO_3V3
 Wire Wire Line
 	2200 5750 2200 5450
 Wire Wire Line
-	1850 5750 2200 5750
+	1850 5750 2050 5750
 Wire Wire Line
 	1850 5700 1850 5750
 Wire Wire Line
@@ -1411,12 +1403,12 @@ Connection ~ 2200 3600
 Wire Notes Line
 	600  4700 2800 4700
 Wire Notes Line
-	2800 4700 2800 6000
+	2800 4700 2800 6050
 Wire Notes Line
-	2800 6000 600  6000
+	2800 6050 600  6050
 Wire Notes Line
-	600  6000 600  4700
-Text Notes 1850 5950 2    50   ~ 0
+	600  6050 600  4700
+Text Notes 1850 6000 2    50   ~ 0
 Pull HPD low when powered off
 $Comp
 L Transistor_FET:BSS123 Q4
@@ -1440,8 +1432,6 @@ F 3 "http://www.diodes.com/assets/Datasheets/ds30366.pdf" H 1750 5500 50  0001 L
 	1    1750 5500
 	1    0    0    -1  
 $EndComp
-Text GLabel 6100 4050 2    50   Input ~ 0
-HDMI_5V
 $Comp
 L Device:Crystal_Small Y2
 U 1 1 60988C2F
@@ -1490,6 +1480,57 @@ Wire Wire Line
 Wire Wire Line
 	1000 4100 1100 4100
 NoConn ~ 1700 3500
+$Comp
+L power:+5V #PWR0194
+U 1 1 5E441643
+P 2400 950
+F 0 "#PWR0194" H 2400 800 50  0001 C CNN
+F 1 "+5V" H 2415 1123 50  0000 C CNN
+F 2 "" H 2400 950 50  0001 C CNN
+F 3 "" H 2400 950 50  0001 C CNN
+	1    2400 950 
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:+5V #PWR0195
+U 1 1 5E44BA2A
+P 3800 1250
+F 0 "#PWR0195" H 3800 1100 50  0001 C CNN
+F 1 "+5V" H 3815 1423 50  0000 C CNN
+F 2 "" H 3800 1250 50  0001 C CNN
+F 3 "" H 3800 1250 50  0001 C CNN
+	1    3800 1250
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:+5V #PWR0196
+U 1 1 5E4559E2
+P 6200 3900
+F 0 "#PWR0196" H 6200 3750 50  0001 C CNN
+F 1 "+5V" H 6215 4073 50  0000 C CNN
+F 2 "" H 6200 3900 50  0001 C CNN
+F 3 "" H 6200 3900 50  0001 C CNN
+	1    6200 3900
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	6200 3900 6200 4050
+$Comp
+L power:GND #PWR0197
+U 1 1 5EDA9DEE
+P 2050 5800
+F 0 "#PWR0197" H 2050 5550 50  0001 C CNN
+F 1 "GND" H 2055 5627 50  0000 C CNN
+F 2 "" H 2050 5800 50  0001 C CNN
+F 3 "" H 2050 5800 50  0001 C CNN
+	1    2050 5800
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	2050 5750 2050 5800
+Connection ~ 2050 5750
+Wire Wire Line
+	2050 5750 2200 5750
 Wire Bus Line
 	9900 1900 9900 4450
 $EndSCHEMATC

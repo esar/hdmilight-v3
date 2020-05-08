@@ -622,10 +622,6 @@ Wire Wire Line
 	7700 4900 7700 4750
 Wire Wire Line
 	7500 4600 7700 4600
-Text HLabel 6600 3700 2    50   Input ~ 0
-USB_RXD
-Text HLabel 6600 3600 2    50   Input ~ 0
-USB_TXD
 Wire Wire Line
 	6300 3600 6600 3600
 Wire Wire Line
@@ -871,4 +867,8 @@ Wire Wire Line
 Connection ~ 4050 4100
 NoConn ~ 1950 3100
 NoConn ~ 2350 2900
+Text HLabel 6600 3700 2    50   Input ~ 0
+USB_RXD
+Text HLabel 6600 3600 2    50   Input ~ 0
+USB_TXD
 $EndSCHEMATC

@@ -206,7 +206,7 @@ U 1 1 5DC202BD
 P 5450 6950
 F 0 "U7" H 5900 6450 50  0000 L CNN
 F 1 "S25FL064L" H 5600 6550 50  0000 L CNN
-F 2 "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm" H 5450 6350 50  0001 C CNN
+F 2 "Package_SO:SOIC-8_5.23x5.23mm_P1.27mm" H 5450 6350 50  0001 C CNN
 F 3 "" H 5450 6950 50  0001 C CNN
 	1    5450 6950
 	1    0    0    -1  
@@ -318,14 +318,6 @@ Wire Wire Line
 Wire Wire Line
 	7850 6200 7850 6000
 Wire Wire Line
-	10500 3200 10900 3200
-Wire Wire Line
-	10500 3300 10900 3300
-Wire Wire Line
-	10500 3400 10900 3400
-Wire Wire Line
-	10500 3500 10900 3500
-Wire Wire Line
 	10500 3600 10900 3600
 Wire Wire Line
 	10500 3700 10900 3700
@@ -333,22 +325,38 @@ Wire Wire Line
 	10500 3800 10900 3800
 Wire Wire Line
 	10500 3900 10900 3900
+Wire Wire Line
+	10500 4000 10900 4000
+Wire Wire Line
+	10500 4100 10900 4100
+Wire Wire Line
+	10500 4200 10900 4200
+Wire Wire Line
+	10500 4300 10900 4300
 Entry Wire Line
-	10900 3200 11000 3100
+	10900 3600 11000 3700
 Entry Wire Line
-	10900 3300 11000 3200
+	10900 3700 11000 3800
 Entry Wire Line
-	10900 3400 11000 3300
+	10900 3800 11000 3900
 Entry Wire Line
-	10900 3500 11000 3400
+	10900 3900 11000 4000
 Entry Wire Line
-	10900 3600 11000 3500
+	10900 4000 11000 4100
 Entry Wire Line
-	10900 3700 11000 3600
+	10900 4100 11000 4200
 Entry Wire Line
-	10900 3800 11000 3700
+	10900 4200 11000 4300
 Entry Wire Line
-	10900 3900 11000 3800
+	10900 4300 11000 4400
+Wire Wire Line
+	10500 3500 10900 3500
+Wire Wire Line
+	10500 3400 10900 3400
+Wire Wire Line
+	10500 3300 10900 3300
+Wire Wire Line
+	10500 3200 10900 3200
 Wire Wire Line
 	10500 3100 10900 3100
 Wire Wire Line
@@ -357,79 +365,69 @@ Wire Wire Line
 	10500 2900 10900 2900
 Wire Wire Line
 	10500 2800 10900 2800
-Wire Wire Line
-	10500 2700 10900 2700
-Wire Wire Line
-	10500 2600 10900 2600
+Entry Wire Line
+	10900 3500 11000 3600
+Entry Wire Line
+	10900 3400 11000 3500
+Entry Wire Line
+	10900 3300 11000 3400
+Entry Wire Line
+	10900 3200 11000 3300
+Entry Wire Line
+	10900 3100 11000 3200
+Entry Wire Line
+	10900 3000 11000 3100
+Entry Wire Line
+	10900 2900 11000 3000
+Entry Wire Line
+	10900 2800 11000 2900
+Text Label 10900 2800 2    50   ~ 0
+LED_OUT15
+Text Label 10900 2900 2    50   ~ 0
+LED_OUT14
+Text Label 10900 3000 2    50   ~ 0
+LED_OUT13
+Text Label 10900 3100 2    50   ~ 0
+LED_OUT12
+Text Label 10900 3200 2    50   ~ 0
+LED_OUT11
+Text Label 10900 3300 2    50   ~ 0
+LED_OUT10
+Text Label 10900 3400 2    50   ~ 0
+LED_OUT9
+Text Label 10900 3500 2    50   ~ 0
+LED_OUT8
+Text Label 10900 3600 2    50   ~ 0
+LED_OUT7
+Text Label 10900 3700 2    50   ~ 0
+LED_OUT6
+Text Label 10900 3800 2    50   ~ 0
+LED_OUT5
+Text Label 10900 3900 2    50   ~ 0
+LED_OUT4
+Text Label 10900 4000 2    50   ~ 0
+LED_OUT3
+Text Label 10900 4100 2    50   ~ 0
+LED_OUT2
+Text Label 10900 4200 2    50   ~ 0
+LED_OUT1
+Text Label 10900 4300 2    50   ~ 0
+LED_OUT0
+Text HLabel 11150 4500 3    50   Input ~ 0
+LED_OUT[0..15]
 Wire Wire Line
 	10500 2500 10900 2500
 Wire Wire Line
 	10500 2400 10900 2400
-Entry Wire Line
-	10900 3100 11000 3000
-Entry Wire Line
-	10900 3000 11000 2900
-Entry Wire Line
-	10900 2900 11000 2800
-Entry Wire Line
-	10900 2800 11000 2700
-Entry Wire Line
-	10900 2700 11000 2600
-Entry Wire Line
-	10900 2600 11000 2500
-Entry Wire Line
-	10900 2500 11000 2400
-Entry Wire Line
-	10900 2400 11000 2300
-Text Label 10900 2400 2    50   ~ 0
-LED_OUT15
 Text Label 10900 2500 2    50   ~ 0
-LED_OUT14
-Text Label 10900 2600 2    50   ~ 0
-LED_OUT13
-Text Label 10900 2700 2    50   ~ 0
-LED_OUT12
-Text Label 10900 2800 2    50   ~ 0
-LED_OUT11
-Text Label 10900 2900 2    50   ~ 0
-LED_OUT10
-Text Label 10900 3000 2    50   ~ 0
-LED_OUT9
-Text Label 10900 3100 2    50   ~ 0
-LED_OUT8
-Text Label 10900 3200 2    50   ~ 0
-LED_OUT7
-Text Label 10900 3300 2    50   ~ 0
-LED_OUT6
-Text Label 10900 3400 2    50   ~ 0
-LED_OUT5
-Text Label 10900 3500 2    50   ~ 0
-LED_OUT4
-Text Label 10900 3600 2    50   ~ 0
-LED_OUT3
-Text Label 10900 3700 2    50   ~ 0
-LED_OUT2
-Text Label 10900 3800 2    50   ~ 0
-LED_OUT1
-Text Label 10900 3900 2    50   ~ 0
-LED_OUT0
-Wire Bus Line
-	11000 2300 11150 2300
-Text HLabel 11150 2650 3    50   Input ~ 0
-LED_OUT[0..15]
-Wire Wire Line
-	10500 2100 10900 2100
-Wire Wire Line
-	10500 2000 10900 2000
-Text Label 10900 2100 2    50   ~ 0
 PAPIX_RGB0
-Text Label 10900 2000 2    50   ~ 0
+Text Label 10900 2400 2    50   ~ 0
 PAPIX_RGB1
 Entry Wire Line
-	10900 2000 11000 1900
+	10900 2400 11000 2500
 Entry Wire Line
-	10900 2100 11000 2000
-Text HLabel 11000 1800 1    50   Input ~ 0
+	10900 2500 11000 2600
+Text HLabel 11200 2900 3    50   Input ~ 0
 PAPIX_RGB[0..1]
 Wire Wire Line
 	1200 1350 1200 1250
@@ -736,12 +734,6 @@ Wire Wire Line
 Connection ~ 5350 650 
 Wire Wire Line
 	5350 650  5650 650 
-Wire Wire Line
-	10500 4100 10600 4100
-Wire Wire Line
-	10500 4200 10600 4200
-Wire Wire Line
-	10500 4300 10600 4300
 Text HLabel 4900 3750 2    50   Input ~ 0
 POS_SENSOR0
 Text HLabel 4900 3950 2    50   Input ~ 0
@@ -749,16 +741,6 @@ POS_SENSOR3
 Text HLabel 4900 4050 2    50   Input ~ 0
 POS_SENSOR1
 Text HLabel 4900 4350 2    50   Input ~ 0
-POS_SENSOR2
-Wire Wire Line
-	10500 4000 10600 4000
-Text HLabel 10600 4300 2    50   Input ~ 0
-POS_SENSOR0
-Text HLabel 10600 4200 2    50   Input ~ 0
-POS_SENSOR3
-Text HLabel 10600 4100 2    50   Input ~ 0
-POS_SENSOR1
-Text HLabel 10600 4000 2    50   Input ~ 0
 POS_SENSOR2
 $Comp
 L Device:C_Small C72
@@ -1135,10 +1117,6 @@ Text HLabel 4900 2250 2    50   Input ~ 0
 ADV_SCLK
 Text HLabel 4900 2150 2    50   Input ~ 0
 ADV_AP
-Text HLabel 4900 3050 2    50   Input ~ 0
-MCU_SDA
-Text HLabel 4900 2950 2    50   Input ~ 0
-MCU_SCL
 Wire Wire Line
 	4800 2150 4900 2150
 Wire Wire Line
@@ -1155,10 +1133,6 @@ Wire Wire Line
 	4800 2750 4900 2750
 Wire Wire Line
 	4800 2850 4900 2850
-Wire Wire Line
-	4800 2950 4900 2950
-Wire Wire Line
-	4800 3050 4900 3050
 Wire Wire Line
 	4800 3350 4900 3350
 Wire Wire Line
@@ -1181,14 +1155,10 @@ Wire Wire Line
 	4800 3250 4900 3250
 Text HLabel 4900 3650 2    50   Input ~ 0
 MCU_D2
-Text HLabel 4900 3850 2    50   Input ~ 0
-MCU_PB5
 Text HLabel 4900 4250 2    50   Input ~ 0
 MCU_PB8
 Wire Wire Line
 	4800 4250 4900 4250
-Wire Wire Line
-	4800 3850 4900 3850
 Wire Wire Line
 	4800 3650 4900 3650
 Text HLabel 7950 5650 2    50   Input ~ 0
@@ -1196,37 +1166,23 @@ RST
 Wire Wire Line
 	7850 5650 7950 5650
 Entry Wire Line
-	10900 2300 11000 2200
-Wire Bus Line
-	11000 2100 11150 2100
+	10900 2700 11000 2800
 Entry Wire Line
-	10900 2200 11000 2100
-Text HLabel 11150 2050 1    50   Input ~ 0
+	10900 2600 11000 2700
+Text HLabel 11100 2900 3    50   Input ~ 0
 5V_OUTPUT[0..1]
-Text Label 10900 2200 2    50   ~ 0
+Text Label 10900 2600 2    50   ~ 0
 5V_OUTPUT1
-Text Label 10900 2300 2    50   ~ 0
+Text Label 10900 2700 2    50   ~ 0
 5V_OUTPUT0
 Wire Wire Line
-	10500 2200 10900 2200
+	10500 2600 10900 2600
 Wire Wire Line
-	10500 2300 10900 2300
-Wire Wire Line
-	6500 4400 6000 4400
-Wire Wire Line
-	6500 4300 5900 4300
-Entry Wire Line
-	5800 4300 5900 4400
-Entry Wire Line
-	5800 4200 5900 4300
-Text Label 6100 4400 0    50   ~ 0
+	10500 2700 10900 2700
+Text Label 10900 2100 2    50   ~ 0
 PAPIX_POS0
-Text Label 6100 4300 0    50   ~ 0
+Text Label 10900 2000 2    50   ~ 0
 PAPIX_POS1
-Wire Bus Line
-	5650 4200 5800 4200
-Text HLabel 5650 3900 1    50   Input ~ 0
-PAPIX_POS[0..1]
 Wire Wire Line
 	6500 3900 6000 3900
 Wire Wire Line
@@ -1384,32 +1340,25 @@ Wire Wire Line
 $Comp
 L Device:R R57
 U 1 1 60AF6D65
-P 6150 4650
-F 0 "R57" V 6050 4650 50  0000 C CNN
-F 1 "10K" V 6150 4650 50  0000 C CNN
-F 2 "Resistor_SMD:R_0603_1608Metric" V 6080 4650 50  0001 C CNN
-F 3 "~" H 6150 4650 50  0001 C CNN
-	1    6150 4650
-	0    1    1    0   
+P 6250 4400
+F 0 "R57" V 6350 4400 50  0000 C CNN
+F 1 "10K" V 6250 4400 50  0000 C CNN
+F 2 "Resistor_SMD:R_0603_1608Metric" V 6180 4400 50  0001 C CNN
+F 3 "~" H 6250 4400 50  0001 C CNN
+	1    6250 4400
+	0    -1   -1   0   
 $EndComp
-Text GLabel 6350 4650 2    50   Input ~ 0
+Text GLabel 6050 4400 0    50   Input ~ 0
 FPGA_3V3
 Wire Wire Line
-	6300 4650 6350 4650
-Wire Wire Line
-	6000 4650 6000 4400
-Connection ~ 6000 4400
-Wire Wire Line
-	6000 4400 5900 4400
+	6100 4400 6050 4400
 Wire Wire Line
 	4300 6350 4400 6350
 Wire Wire Line
 	4450 6850 4850 6850
-Wire Wire Line
-	6500 4100 5900 4100
-Text Label 6100 4100 0    50   ~ 0
+Text Label 10900 2300 2    50   ~ 0
 5V_INPUT1
-Text Label 6100 4200 0    50   ~ 0
+Text Label 10900 2200 2    50   ~ 0
 5V_INPUT0
 $Comp
 L Device:C_Small C98
@@ -1839,7 +1788,6 @@ NoConn ~ 6500 2900
 NoConn ~ 6500 3000
 NoConn ~ 6500 3100
 NoConn ~ 4800 4150
-NoConn ~ 4800 4450
 NoConn ~ 7100 6050
 Wire Wire Line
 	1200 1250 1300 1250
@@ -1862,32 +1810,63 @@ Wire Wire Line
 Connection ~ 5650 1300
 Wire Wire Line
 	6000 4000 6500 4000
-Wire Wire Line
-	6500 4200 5900 4200
-Text HLabel 5800 3900 1    50   Input ~ 0
+Wire Bus Line
+	11000 2700 11000 2800
+Entry Wire Line
+	11000 2100 10900 2200
+Entry Wire Line
+	11000 2200 10900 2300
+Text HLabel 11150 2000 1    50   Input ~ 0
 5V_INPUT[0..1]
+Text HLabel 11000 1600 1    50   Input ~ 0
+PAPIX_POS[0..1]
 Entry Wire Line
-	5800 4100 5900 4200
+	11000 1900 10900 2000
 Entry Wire Line
-	5800 4000 5900 4100
+	11000 2000 10900 2100
 Wire Bus Line
-	5800 4200 5800 4300
+	11000 4400 11150 4400
 Wire Bus Line
-	5650 3900 5650 4200
+	11150 4400 11150 4500
 Wire Bus Line
-	11150 2050 11150 2100
+	11000 2800 11100 2800
+Wire Bus Line
+	11100 2800 11100 2900
+Wire Bus Line
+	11000 2500 11000 2600
+Wire Bus Line
+	11000 2600 11200 2600
+Wire Bus Line
+	11200 2600 11200 2900
+Wire Wire Line
+	10500 2100 10900 2100
+Wire Wire Line
+	10500 2300 10900 2300
+Wire Wire Line
+	10500 2200 10900 2200
+Wire Wire Line
+	10500 2000 10900 2000
+Wire Wire Line
+	6400 4400 6500 4400
+Wire Wire Line
+	4800 4450 4900 4450
+Text HLabel 4900 4450 2    50   Input ~ 0
+SPI_NSS
+NoConn ~ 4800 2950
+NoConn ~ 4800 3050
+NoConn ~ 4800 3850
+Wire Bus Line
+	11000 2100 11150 2100
+Wire Bus Line
+	11150 2100 11150 2000
 Wire Bus Line
 	11000 2100 11000 2200
 Wire Bus Line
-	11150 2300 11150 2650
-Wire Bus Line
-	11000 1800 11000 2000
-Wire Bus Line
-	5800 3900 5800 4100
+	11000 1600 11000 2000
 Wire Bus Line
 	5900 3100 5900 3900
 Wire Bus Line
-	11000 2300 11000 3800
+	11000 2900 11000 4400
 Wire Bus Line
 	550  1550 550  4850
 $EndSCHEMATC
