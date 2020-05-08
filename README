@@ -1,26 +1,5 @@
-For latest version, go to http://hacks.esar.org.uk/
+WARNING: This version is incomplete
 
-How to use:
-
-1) Manufacture the HDMI receiver board that can be found in 
-   the 'board' directory (CADSoft Eagle format).
-2) Open the 'fpga/hdmilight.xise' project in Xilinx ISE and
-   generate a bit file.
-3) Edit the files under the config directory to configure
-   the LEDs.
-4) Edit 'Makefile' in the top level directory and set
-   the DATA2MEM path for the Xilinx data2mem tool location
-   on your system.
-5) Run 'make' in the top level directory, which will build
-   'tools/makemem', then the firmware image, then the config
-   files, before merging the firmware and config into the
-   final bitfile.
-   The final result should be hdmilight.bit in the top
-   level directory.
-6) Upload hdmilight.bit to a Papilio Pro FPGA board
-7) Install the HDMI receiver board on to the Papilio board.
-8) Connect LED strips to output pins
-9) Open a serial terminal to the Papilio
-10) Connect HDMI source to receiver board
-11) It should now be working.
-
+This is a still-in-progress update to my hdmilight-v2 project.
+This version moves everything onto one board, no longer needing a separate Papilio FPGA board.
+Additionally it removes the AVR CPU from within the FPGA design and adds an ARM Cortex MCU to the board instead. This fixes the lack of any spare memory for program code.
