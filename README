@@ -40,11 +40,7 @@ Build instructions:
      **** ACTUALLY NOT! This project isn't finished yet! ****
 
 
-Currently the FPGA does not boot from flash. You must run "make fpga_program"
-after powering up the board to program the FPGA and this will be lost when
-power is cut. 
-
-Other than that, the main functionality that is currently missing in this 
+The main functionality that is currently missing in this 
 version is access to the FPGA flash memory by the ARM microcontroller. 
 This means that it has no way to load the configuration that was appended 
 to the bit file during the build.

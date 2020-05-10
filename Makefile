@@ -1,4 +1,4 @@
-.PHONY: tools tools_clean firmware firmware_clean config config_clean fpga_program fpga_flash 
+.PHONY: tools tools_clean firmware firmware_clean config config_clean fpga_program fpga_flash fpga_flash_design fpga_flash_config
 
 all: firmware config firmware_flash fpga_flash
 
@@ -25,7 +25,10 @@ config_clean:
 fpga_program:
 	openocd -f hdmilight-v3-openocd.cfg -c "init; targets xc6s.proxy; xc6s_program xc6s.tap; pld load 0 hdmilight.bit; exit"
 
-fpga_flash:
-	openocd -f hdmilight-v3-openocd.cfg -c "init; targets xc6s.proxy; jtagspi_init 0 bscan_spi_xc6slx9.bit; jtagspi_program hdmilight.bit 0; xc6s_program xc6s.tap; shutdown"
+fpga_flash: fpga_flash_design fpga_flash_config
 
+fpga_flash_design:
+	openocd -f hdmilight-v3-openocd.cfg -c "init; targets xc6s.proxy; jtagspi_init 0 bscan_spi_xc6slx9.bit; jtagspi_program fpga/HdmilightTop.bin 0; xc6s_program xc6s.tap; shutdown"
 
+fpga_flash_config:
+	openocd -f hdmilight-v3-openocd.cfg -c "init; targets xc6s.proxy; jtagspi_init 0 bscan_spi_xc6slx9.bit; jtagspi_program config/merged.bin 0x60000; xc6s_program xc6s.tap; shutdown"
