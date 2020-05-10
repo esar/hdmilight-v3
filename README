@@ -1,5 +1,73 @@
 WARNING: This version is incomplete
 
 This is a still-in-progress update to my hdmilight-v2 project.
-This version moves everything onto one board, no longer needing a separate Papilio FPGA board.
-Additionally it removes the AVR CPU from within the FPGA design and adds an ARM Cortex MCU to the board instead. This fixes the lack of any spare memory for program code.
+
+Differences in this version:
+ * Everything is on a standalone board, no longer needs a Papilio FPGA board
+ * AVR CPU removed from FPGA design and replaced by a separate ARM Cortex MCU.
+   The main reason for this change was to get more program memory. The FPGA
+   had no more spare block RAMs. It also has the advantage of being a much
+   more capable CPU and having live debugging via JTAG.
+ * Power supply switching for the LEDs. This version can power down the 
+   LED strips when not in use.
+ * Extra pins added to each LED output port, now have +5V, DAT, GND, CLK
+   Currently it still only support 3-wire LED strips, but in the future
+   it should be able to support 4-wire clocked strips
+ * Magical mystery connectors (vivepos / papix). The real reason I made
+   this revision... a platform to experiment with my crazy ideas
+
+
+
+Build instructions:
+
+ 1) Manufacture the HDMI receiver board that can be found in 
+    the 'board' directory (KiCad format).
+ 2) Open the 'fpga/hdmilight.xise' project in Xilinx ISE and
+    generate a bit file.
+ 3) Edit the files under the config directory to configure
+    the LEDs.
+ 5) Run 'make' in the top level directory, which will do the following:
+      * Build the firmware image
+      * Convert the text config file to binary format
+      * Append the config to the end of the FPGA bit file
+      * Flash the ARM microcontroller with the firmware
+      * Flash the FPGA config flash with the bit file
+ 8) Connect LED strips to output pins
+ 9) Open a serial terminal to the board 
+    (running "dmesg" is useful to see names of recently added serial ports)
+ 10) Connect HDMI source to receiver board
+ 11) It should now be working. 
+     **** ACTUALLY NOT! This project isn't finished yet! ****
+
+
+Currently the FPGA does not boot from flash. You must run "make fpga_program"
+after powering up the board to program the FPGA and this will be lost when
+power is cut. 
+
+Other than that, the main functionality that is currently missing in this 
+version is access to the FPGA flash memory by the ARM microcontroller. 
+This means that it has no way to load the configuration that was appended 
+to the bit file during the build.
+
+However, the serial console should be working and it should be possible to 
+manually configure by issuing lots of commands through the terminal. It should
+then mostly work, but remember that this version is incomplete and has had
+very little testing. There will definitely be many bugs that I don't know
+about yet.
+
+
+
+Useful build targets:
+ * make firmware: build the firmware without flashing
+ * make firmware_flash: flash the last build to the ARM
+ * make fpga_program: reprogram FPGA without programming flash
+                      will be lost on thxt power-cycle
+ * make fpga_flash: reprogram the FPGA flash
+
+
+Debugging the firmware:
+ 1) start openocd: openocd -f hdmilight-v3-openocd.cfg
+ 2) start gdb: arm-none-eabi-gdb
+ 3) in gdb, load firmware: file firmware/main.elf
+ 4) in gdb, connect to board: target remote :3333
+

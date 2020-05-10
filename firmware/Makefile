@@ -57,7 +57,7 @@ main.elf: $(OBJS)
 
 
 flash: main.bin
-	sudo openocd -f ../hdmilight-v3-openocd.cfg -c "program $^ reset exit 0x08000000"
+	sudo openocd -f ../hdmilight-v3-openocd.cfg -c "targets stm32f3x.cpu; program $^ reset exit 0x08000000"
 
 size: main.elf
 	$(SIZE) $< 
