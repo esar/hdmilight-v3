@@ -107,6 +107,8 @@ uint8_t i2cWriteAdvRegister(uint8_t addr, uint8_t subaddr, uint8_t value);
 void spiInit();
 void spiWrite(uint16_t address, void* data, uint16_t length);
 void spiRead(uint16_t address, void* data, uint16_t length);
+void spiConfigLoad(uint8_t slot);
+uint8_t spiConfigStatus();
 
 void changeFormat();
 

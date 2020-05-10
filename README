@@ -40,16 +40,14 @@ Build instructions:
      **** ACTUALLY NOT! This project isn't finished yet! ****
 
 
-The main functionality that is currently missing in this 
-version is access to the FPGA flash memory by the ARM microcontroller. 
-This means that it has no way to load the configuration that was appended 
-to the bit file during the build.
 
-However, the serial console should be working and it should be possible to 
-manually configure by issuing lots of commands through the terminal. It should
-then mostly work, but remember that this version is incomplete and has had
-very little testing. There will definitely be many bugs that I don't know
-about yet.
+The following functionality that works in v2 is known not to work here:
+ 1) Automatic config switching when source aspect ratio changes.
+    Config must currently be manually loaded via GM serial command
+    For example, to load config 0: GM 0
+ 2) CEC remote control key presses
+ 3) Many other things that I haven't found yet
+
 
 
 
@@ -59,6 +57,7 @@ Useful build targets:
  * make fpga_program: reprogram FPGA without programming flash
                       will be lost on thxt power-cycle
  * make fpga_flash: reprogram the FPGA flash
+ * make fpga_flash_config: reprogram just the configuration part of the FPGA flash
 
 
 Debugging the firmware:

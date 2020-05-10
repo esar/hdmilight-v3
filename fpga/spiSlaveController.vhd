@@ -25,7 +25,12 @@ entity spiSlaveController is
 		config_data_in   : in  std_logic_vector( 7 downto 0);
 		config_data_out  : out std_logic_vector( 7 downto 0);
 		config_data_addr : out std_logic_vector(15 downto 0);
-		config_data_we   : out std_logic
+		config_data_we   : out std_logic;
+		
+		flash_spi_clk  : out std_logic;
+		flash_spi_cs   : out std_logic;
+		flash_spi_mosi : out std_logic;
+		flash_spi_miso : in  std_logic
 	);
 end spiSlaveController;
 
@@ -37,18 +42,19 @@ architecture Behavioral of spiSlaveController is
 		STATE_READ_ADDR_MSB, STATE_READ_ADDR_LSB, STATE_READ_DUMMY, STATE_READ_BYTE,
 		STATE_WRITE_ADDR_MSB, STATE_WRITE_ADDR_LSB, STATE_WRITE_BYTE,
 		STATE_FLASH_SAVE_ADDR,
-		STATE_FLASH_RESTORE_ADDR
+		STATE_FLASH_RESTORE_ADDR,
+		STATE_FLASH_DMA
 	);
 	
 	type SrcType is (
-		TX_SRC_NONE, TX_SRC_CONFIG, TX_SRC_STATUS
+		TX_SRC_NONE, TX_SRC_CONFIG, TX_SRC_FLASH_TRANSFER_STATUS
 	);
 	
 	constant CMD_READ          : std_logic_vector(7 downto 0) := "00000001";
 	constant CMD_WRITE         : std_logic_vector(7 downto 0) := "00000010";
-	constant CMD_FLASH_SAVE    : std_logic_vector(7 downto 0) := "00000011";
-	constant CMD_FLASH_RESTORE : std_logic_vector(7 downto 0) := "00000100";
-	constant CMD_FLASH_STATUS  : std_logic_vector(7 downto 0) := "00000101";
+	constant CMD_FLASH_RESTORE : std_logic_vector(7 downto 0) := "10100000";
+	constant CMD_FLASH_SAVE    : std_logic_vector(7 downto 0) := "10100001";
+	constant CMD_FLASH_STATUS  : std_logic_vector(7 downto 0) := "10100010";
 
 	signal state     : StateType := STATE_CMD;
 	signal tx_src    : SrcType;
@@ -63,12 +69,39 @@ architecture Behavioral of spiSlaveController is
 
 	signal addr         : std_logic_vector(15 downto 0);
 	
+	signal we            : std_logic;
+	
 	signal addr_lsb_load : std_logic;
 	signal addr_msb_load : std_logic;
 	signal addr_inc      : std_logic;
+	
+	signal flash_dma_start_addr : std_logic_vector(23 downto 0);
+	signal flash_dma_start      : std_logic := '0';
+	signal flash_dma_busy       : std_logic;
+	signal flash_dma_we         : std_logic;
+	signal flash_dma_addr       : std_logic_vector(15 downto 0);
+	signal flash_dma_data_out   : std_logic_vector(7 downto 0);
 begin
 	slave : entity work.spiSlave port map(
 		spi_clk, spi_cs, spi_mosi, spi_miso, rx_data, tx_data, byte_ready
+	);
+	
+	flashdma : entity work.flashDMAController port map(
+		clk, 
+		flash_dma_start_addr, 
+		(others => '0'),
+		"1000000000000000",
+		'0',
+		flash_dma_start,
+		flash_dma_busy,
+		flash_dma_we,
+		flash_dma_addr,
+		config_data_in,
+		flash_dma_data_out,
+		flash_spi_clk,
+		flash_spi_cs,
+		flash_spi_mosi,
+		flash_spi_miso
 	);
 
 
@@ -102,10 +135,11 @@ begin
 			state <= STATE_CMD;
 			tx_src <= TX_SRC_NONE;
 		elsif rising_edge(clk) then
-			config_data_we <= '0';
+			we <= '0';
 			addr_msb_load <= '0';
 			addr_lsb_load <= '0';
 			addr_inc <= '0';
+			flash_dma_start <= '0';
 
 			if step = '1' then
 				case state is
@@ -119,8 +153,9 @@ begin
 								state <= STATE_FLASH_SAVE_ADDR;
 							when CMD_FLASH_RESTORE =>
 								state <= STATE_FLASH_RESTORE_ADDR;
+								--state <= STATE_FLASH_DMA;
 							when CMD_FLASH_STATUS =>
-								tx_src <= TX_SRC_STATUS;
+								tx_src <= TX_SRC_FLASH_TRANSFER_STATUS;
 								state <= STATE_NONE;
 							when others =>
 								state <= STATE_NONE;
@@ -146,29 +181,39 @@ begin
 						addr_lsb_load <= '1';
 						state <= STATE_WRITE_BYTE;
 					when STATE_WRITE_BYTE =>
-						config_data_we <= '1';
+						we <= '1';
 						addr_inc <= '1';
 
 					when STATE_FLASH_SAVE_ADDR =>
 						addr_lsb_load <= '1';
-						--flash_transfer_start <= '1';
 						state <= STATE_NONE;
 
 					when STATE_FLASH_RESTORE_ADDR =>
 						addr_lsb_load <= '1';
-						--flash_transfer_start <= '1';
-						state <= STATE_NONE;
+						state <= STATE_FLASH_DMA;
 
+					when STATE_FLASH_DMA =>
+						-- flash address = 0x60000 + (slot * 32768)
+						flash_dma_start_addr <= std_logic_vector(16#60000# + unsigned("0" & addr(7 downto 0) & "000000000000000"));
+						flash_dma_start <= '1';
+						state <= STATE_NONE;
+					
 					when STATE_NONE =>
 				end case;
 			end if;
 		end if;
 	end process;
 
-	tx_data <= config_data_in        when tx_src = TX_SRC_CONFIG else
-	           --flash_transfer_status when tx_src = TX_SRC_FLASH_TRANSFER_STATUS else
+	tx_data <= config_data_in               when tx_src = TX_SRC_CONFIG else
+	           "0000000" & flash_dma_busy   when tx_src = TX_SRC_FLASH_TRANSFER_STATUS else
 	           "00000000";
 
-	config_data_addr <= addr;
-	config_data_out <= rx_data;
+	config_data_addr <= addr                when flash_dma_busy = '0' else
+	                    flash_dma_addr;
+							  
+	config_data_out <=  rx_data             when flash_dma_busy = '0' else
+	                    flash_dma_data_out;
+							  
+	config_data_we <=   we                  when flash_dma_busy = '0' else
+	                    flash_dma_we;
 end Behavioral;

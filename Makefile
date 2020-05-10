@@ -17,13 +17,12 @@ firmware_clean:
 
 config:
 	make -C config
-	tools/bitmerge.py --pad=0x10000 fpga/HdmilightTop.bit config/merged.bin hdmilight.bit
 
 config_clean:
 	make -C config clean
 
 fpga_program:
-	openocd -f hdmilight-v3-openocd.cfg -c "init; targets xc6s.proxy; xc6s_program xc6s.tap; pld load 0 hdmilight.bit; exit"
+	openocd -f hdmilight-v3-openocd.cfg -c "init; targets xc6s.proxy; xc6s_program xc6s.tap; pld load 0 fpga/HdmilightTop.bit; exit"
 
 fpga_flash: fpga_flash_design fpga_flash_config
 

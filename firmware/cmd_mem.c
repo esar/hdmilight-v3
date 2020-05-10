@@ -28,19 +28,28 @@
 
 void cmdGetMem(uint8_t argc, char** argv)
 {
-	printf("not implemented\n");
-
-/*
 	if(argc == 2)
 	{
 		uint32_t config = getint(&argv[1]);
+		uint8_t status = 0;
+		uint32_t count;
+
+		// first slot contains format table, so step over it
 		config += 1;
-		config *= 0x8000;
 
 		printf("loading config...\n");
-		dmaRead(config >> 16, config & 0xffff, 0x8000, 0x8000);
+		spiConfigLoad(config);
+		while(spiConfigStatus() & 1 != 0)
+			;
 		printf("done.\n");
+
+		//for(count = 0; count < 32; ++count)
+		//{
+		//	status = spiConfigStatus();
+		//	printf("status: %u\n", status);
+		//}
 	}
+/*
 	else if(argc == 5)
 	{
 		uint16_t sec = getint(&argv[1]);

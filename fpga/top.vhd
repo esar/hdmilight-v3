@@ -148,7 +148,8 @@ ambilight : entity work.ambilight port map(vidclk, viddata_r, viddata_g, viddata
 spi : entity work.spiSlaveController port map(
 	CLK16,
 	MCU_SPI_CLK, MCU_SPI_CS, MCU_SPI_MOSI, MCU_SPI_MISO,
-	AMBILIGHT_CFG_DOUT, AMBILIGHT_CFG_DIN, AMBILIGHT_CFG_ADDR, AMBILIGHT_CFG_WE
+	AMBILIGHT_CFG_DOUT, AMBILIGHT_CFG_DIN, AMBILIGHT_CFG_ADDR, AMBILIGHT_CFG_WE,
+	FLASH_CK, FLASH_CS, FLASH_SI, FLASH_SO
 );
 
 												  
@@ -234,9 +235,7 @@ ADV_RST <= 'Z';
 LED_OUT <= driverOutput;
 LED_OUT <= (others => 'Z');
 LED_CLK <= (others => 'Z');
-FLASH_CK <= '0';
-FLASH_CS <= '0';
-FLASH_SI <= '0';
+
 
 OUT5V <= (others => '0');
 PAPIX_RGB <= (others => '0');

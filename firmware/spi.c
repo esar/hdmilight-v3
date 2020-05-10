@@ -195,3 +195,116 @@ void spiRead(uint16_t address, void* data, uint16_t length)
 	(void)dummy;
 }
 
+void spiConfigLoad(uint8_t slot)
+{
+	volatile uint8_t dummy;
+
+	SPI3->SR &= ~SPI_SR_MODF;
+	SPI3->CR1 |= SPI_CR1_SPE;
+	SPI3->CR1 |= SPI_CR1_MSTR;
+
+	// Send load command
+	while(!(SPI3->SR & SPI_SR_TXE))
+		;
+	*(uint8_t*)&SPI3->DR = 0xa0;
+
+	// Send slot index
+	while(!(SPI3->SR & SPI_SR_TXE))
+		;
+	*(uint8_t*)&SPI3->DR = slot;
+
+	// TODO: Why are these three writes necessary?
+	//       CS seems to be going low too early without them and resetting the 
+	//       state machine in spiSlaveController in the FPGA
+	while(!(SPI3->SR & SPI_SR_TXE))
+		;
+	*(uint8_t*)&SPI3->DR = 1;
+	while(!(SPI3->SR & SPI_SR_TXE))
+		;
+	*(uint8_t*)&SPI3->DR = 1;
+	while(!(SPI3->SR & SPI_SR_TXE))
+		;
+	*(uint8_t*)&SPI3->DR = 0;
+
+	// Wait for transmit FIFO to empty
+	while(SPI3->SR & SPI_SR_FTLVL)
+		;
+	// Wait for bus to be idle
+	while(SPI3->SR & SPI_SR_BSY)
+		;
+
+	// Disable SPI
+	SPI3->CR1 &= ~SPI_CR1_SPE;
+
+	// Clear any junk in the RX FIFO
+	while(SPI3->SR & SPI_SR_FRLVL)
+		dummy = SPI3->DR;
+
+	// pretend we used the dummy value to silence the gcc warning
+	(void)dummy;
+}
+
+uint8_t spiConfigStatus()
+{
+	volatile uint8_t dummy;
+	uint8_t data;
+
+	SPI3->SR &= ~SPI_SR_MODF;
+	SPI3->CR1 |= SPI_CR1_SPE;
+	SPI3->CR1 |= SPI_CR1_MSTR;
+
+	// Send status command
+	while(!(SPI3->SR & SPI_SR_TXE))
+		;
+	*(uint8_t*)&SPI3->DR = 0xa2;
+
+	// Send dummy byte (give the device a few clocks to go get the data)
+	while(!(SPI3->SR & SPI_SR_TXE))
+		;
+	*(uint8_t*)&SPI3->DR = 0;
+
+	// Wait for the TX buffer to empty
+	while(SPI3->SR & SPI_SR_FTLVL)
+		;
+
+	// Wait for the bus to be idle
+	while(SPI3->SR & SPI_SR_BSY)
+		;
+
+	// Clear any junk from the RX buffer
+	while(SPI3->SR & SPI_SR_FRLVL)
+		dummy = SPI3->DR;
+
+	// Send dummy byte to clock the data
+	while(!(SPI3->SR & SPI_SR_TXE))
+		;
+	*(uint8_t*)&SPI3->DR = 0;
+
+	// Wait for the data to arrive in the RX FIFO
+	while(!(SPI3->SR & SPI_SR_FRLVL))
+		;
+
+	// Read it
+	data = SPI3->DR;
+
+	// Follow SPI shutdown procedure, probably unnecessary...
+	// Wait for TX FIFO to be empty (should be already)
+	while(SPI3->SR & SPI_SR_FTLVL)
+		;
+
+	// Wait for bus to be idle (should be already)
+	while(SPI3->SR & SPI_SR_BSY)
+		;
+
+	// Disable SPI
+	SPI3->CR1 &= ~SPI_CR1_SPE;
+
+	// Clear any junk from the RX FIFO
+	while(SPI3->SR & SPI_SR_FRLVL)
+		dummy = SPI3->DR;
+
+	// pretend we used the dummy value to silence the gcc warning
+	(void)dummy;
+
+	return data;
+}
