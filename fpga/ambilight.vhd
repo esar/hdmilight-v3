@@ -49,7 +49,8 @@ entity ambilight is
 			  
            output : out STD_LOGIC_VECTOR(7 downto 0);
 
-           formatChanged : out std_logic);
+           interruptAdv7611 : in STD_LOGIC;
+           interruptOut : out STD_LOGIC);
 
 end ambilight;
 
@@ -69,6 +70,8 @@ signal lineBufferData : std_logic_vector(23 downto 0);
 signal yPos : std_logic_vector(5 downto 0);
 signal lineReady : std_logic;
 
+signal interruptFormatChanged : std_logic;
+
 signal lightCfgWe : std_logic;
 signal lightCfgAddr : std_logic_vector(11 downto 0);
 signal lightCfgDin : std_logic_vector(7 downto 0);
@@ -80,6 +83,9 @@ signal resultLatched : std_logic_vector(31 downto 0);
 signal resultCfgDout : std_logic_vector(7 downto 0);
 signal statusLatched : std_logic_vector(7 downto 0);
 
+signal interruptStatusWe : std_logic;
+signal interruptStatusDin : std_logic_vector(7 downto 0);
+signal interruptStatus : std_logic_vector(7 downto 0);
 
 signal vblank_cfgclk : std_logic_vector(1 downto 0);
 signal vblanklast : std_logic;
@@ -158,7 +164,8 @@ signal cfgResult : std_logic;
 signal cfgStatus : std_logic;
 signal cfgDelay  : std_logic;
 signal cfgFormat : std_logic;
-signal cfgVect   : std_logic_vector(9 downto 0);
+signal cfgInt    : std_logic;
+signal cfgVect   : std_logic_vector(10 downto 0);
 
 signal disabledOutput : std_logic_vector(7 downto 0);
 begin
@@ -178,7 +185,7 @@ formatDetector : entity work.formatDetector port map(vidclk, ce2, hblank_delayed
                                                      cfgclk, x"10", 
                                                      formatXSize, formatXPreActive, formatXPostActive, 
                                                      formatYSize, formatYPreActive, formatYPostActive, 
-                                                     formatChanged);
+                                                     interruptFormatChanged);
 
 process(cfgclk)
 begin
@@ -379,6 +386,18 @@ begin
 	end if;
 end process;
 
+process(cfgclk)
+begin
+	if(rising_edge(cfgclk)) then
+		if(interruptStatusWe = '1') then
+			interruptStatus <= interruptStatus and (not interruptStatusDin);
+		else
+			interruptStatus <= interruptStatus or ("101000" & interruptFormatChanged & interruptAdv7611);
+		end if;
+	end if;
+end process;
+
+
 with cfgaddr(3 downto 0) select resultCfgDout <=
 	resultLatchAddr( 7 downto 0)       when "0000",
 	resultLatchAddr(15 downto 8)       when "0001",
@@ -427,19 +446,21 @@ cfgResult <= '1' when cfgaddr(15 downto 11) = "01011" else '0';          -- 0x58
 cfgStatus <= '1' when cfgaddr(15 downto 11) = "01100" else '0';          -- 0x6000 - 0x67FF
 cfgDelay  <= '1' when cfgaddr(15 downto  3) = "0110100000000" else '0';  -- 0x6800 - 0x6FFF
 cfgFormat <= '1' when cfgaddr(15 downto 11) = "01110" else '0';          -- 0x7000 - 0x77FF
+cfgInt    <= '1' when cfgaddr(15 downto 11) = "01111" else '0';          -- 0x7800 - 0x7FFF
 
-cfgVect <= cfgOutput & cfgCoef & cfgArea & cfgGammaR & cfgGammaG & cfgGammaB & cfgResult & cfgStatus & cfgDelay & cfgFormat;
+cfgVect <= cfgOutput & cfgCoef & cfgArea & cfgGammaR & cfgGammaG & cfgGammaB & cfgResult & cfgStatus & cfgDelay & cfgFormat & cfgInt;
 with cfgVect select cfgdataout <= 
-	outputMapCfgDout   when "1000000000",
-	colourCoefCfgDout  when "0100000000",
-	lightCfgDout       when "0010000000",
-	gammaTableRCfgDout when "0001000000",
-	gammaTableGCfgDout when "0000100000",
-	gammaTableBCfgDout when "0000010000",
-	resultCfgDout      when "0000001000",
-	statusLatched      when "0000000100",
-	resultDelayCfgDout when "0000000010",
-	formatCfgDout      when "0000000001",
+	outputMapCfgDout   when "10000000000",
+	colourCoefCfgDout  when "01000000000",
+	lightCfgDout       when "00100000000",
+	gammaTableRCfgDout when "00010000000",
+	gammaTableGCfgDout when "00001000000",
+	gammaTableBCfgDout when "00000100000",
+	resultCfgDout      when "00000010000",
+	statusLatched      when "00000001000",
+	resultDelayCfgDout when "00000000100",
+	formatCfgDout      when "00000000010",
+	interruptStatus    when "00000000001",
 	"00000000"         when others;
 
 outputMapCfgWr     <= cfgwe when cfgOutput = '1' else '0';
@@ -450,6 +471,7 @@ gammaTableGCfgWr   <= cfgwe when cfgGammaG = '1' else '0';
 gammaTableBCfgWr   <= cfgwe when cfgGammaB = '1' else '0';
 resultDelayCfgWe   <= cfgwe when cfgDelay  = '1' else '0';
 resultCfgWe        <= cfgwe when cfgResult = '1' else '0';
+interruptStatusWe  <= cfgwe when cfgInt    = '1' else '0';
 	
 outputMapCfgDin    <= cfgdatain;
 colourCoefCfgDin   <= cfgdatain;
@@ -458,6 +480,7 @@ gammaTableRCfgDin  <= cfgdatain;
 gammaTableGCfgDin  <= cfgdatain;
 gammaTableBCfgDin  <= cfgdatain;
 resultDelayCfgDin  <= cfgdatain;
+interruptStatusDin <= cfgdatain;
 
 outputMapCfgAddr   <= cfgaddr(12 downto 0);
 colourCoefCfgAddr  <= cfgaddr(11 downto 0);
@@ -466,6 +489,8 @@ gammaTableRCfgAddr <= cfgaddr(10 downto 0);
 gammaTableGCfgAddr <= cfgaddr(10 downto 0);
 gammaTableBCfgAddr <= cfgaddr(10 downto 0);
 resultDelayCfgAddr <= cfgaddr(2 downto 0);
+
+interruptOut <= interruptStatus(0) or interruptStatus(1);
 															 
 end Behavioral;
 

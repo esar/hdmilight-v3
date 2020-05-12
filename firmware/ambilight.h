@@ -48,6 +48,7 @@
 #define AMBILIGHT_BASE_ADDR_STATUS 0x6000
 #define AMBILIGHT_BASE_ADDR_DELAY  0x6800
 #define AMBILIGHT_BASE_ADDR_FORMAT 0x7000
+#define AMBILIGHT_BASE_ADDR_INTERRUPT 0x7800
 
 #define DMA_FLASH_ADDR_H    _SFR_IO8(0x2c)
 #define DMA_FLASH_ADDR_M    _SFR_IO8(0x2d)
@@ -155,6 +156,7 @@ void cmdSetPort(uint8_t argc, char** argv);
 void cmdGetResult(uint8_t argc, char** argv);
 
 void cmdGetStatus(uint8_t argc, char** argv);
+void cmdSetStatus(uint8_t argc, char** argv);
 
 void cmdDisFormat(uint8_t argc, char** argv);
 void cmdEnaFormat(uint8_t argc, char** argv);

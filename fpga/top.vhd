@@ -128,7 +128,7 @@ signal driverOutput : std_logic_vector(7 downto 0);
 signal INT_CLEAR  : std_logic_vector(7 downto 0);
 signal INT_FORMAT : std_logic;
 
-signal formatChanged : std_logic;
+signal interruptOut : std_logic;
 
 begin
 
@@ -143,7 +143,8 @@ ambilight : entity work.ambilight port map(vidclk, viddata_r, viddata_g, viddata
                                            AMBILIGHT_CFG_DIN,
                                            AMBILIGHT_CFG_DOUT,
                                            driverOutput,
-                                           formatChanged);
+                                           ADV_INT1,
+                                           interruptOut);
 
 spi : entity work.spiSlaveController port map(
 	CLK16,
@@ -173,27 +174,6 @@ begin
 		else
 			RST_COUNT <= RST_COUNT + 1;
 		end if;
-	end if;
-end process;
-
-process(RST,CLK16)
-begin
-	if(RST = '1') then
-		INT_FORMAT <= '0';
-	elsif(rising_edge(CLK16)) then
-		if(formatChanged = '1') then
-			INT_FORMAT <= '1';
-		elsif(INT_CLEAR(0) = '1') then
-			INT_FORMAT <= '0';
-		end if;
-
---		if(ADV_INT1 = '1') then
---			MCU_INTVEC <= "100010";
---		elsif(INT_FORMAT = '1') then
---			MCU_INTVEC <= "100001";
---		else
---			MCU_INTVEC <= (others => '0');
---		end if;
 	end if;
 end process;
 
@@ -245,7 +225,7 @@ ADV_SDA <= 'Z';
 MCU_I2C_SCL <= 'Z';
 MCU_I2C_SDA <= 'Z';
 
-MCU_PD2 <= 'Z';
+MCU_PD2 <= interruptOut;
 MCU_PB5 <= 'Z';
 MCU_PB8 <= 'Z';
 

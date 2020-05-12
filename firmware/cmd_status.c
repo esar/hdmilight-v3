@@ -31,4 +31,17 @@ void cmdGetStatus(uint8_t argc, char** argv)
 	uint8_t status;
 	fpgaConfigRead(AMBILIGHT_BASE_ADDR_STATUS, &status, sizeof(status));
 	printf("status: %d\n", status);
+	fpgaConfigRead(AMBILIGHT_BASE_ADDR_INTERRUPT, &status, sizeof(status));
+	printf("interrupts: %02x\n", status);
 }
+
+void cmdSetStatus(uint8_t argc, char** argv)
+{
+	if(argc == 2)
+	{
+		uint16_t mask = getint(&argv[1]);
+		fpgaConfigWrite(AMBILIGHT_BASE_ADDR_INTERRUPT, &mask, sizeof(mask));
+		printf("ok\n");
+	}
+}
+

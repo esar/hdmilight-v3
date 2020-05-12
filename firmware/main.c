@@ -50,37 +50,6 @@ volatile uint8_t g_cecMessageLength;
 
 int __errno;
 
-/*
-ISR(_VECTOR(1))
-{
-	g_formatChanged = 1;
-	INT_CLEAR = 1;
-}
-
-ISR(_VECTOR(2))
-{
-	uint8_t cecRxIntState = i2cRead(0x98, 0x93);
-
-	// if this is a CEC RX message 0 ready interupt
-	if(cecRxIntState & 8)
-	{
-		int i;
-
-		// copy the received message
-		g_cecMessageLength = i2cRead(0x80, 0x25);
-		if(g_cecMessageLength > sizeof(g_cecMessage))
-			g_cecMessageLength = sizeof(g_cecMessage);
-		for(i = 0; i < g_cecMessageLength; ++i)
-			g_cecMessage[i] = i2cRead(0x80, 0x15 + i);
-
-		// clear the message buffer ready for a new message
-		i2cWrite(0x80, 0x2C, 0x02);
-
-		// clear the interrupt
-		i2cWrite(0x98, 0x94, 0x08);
-	}
-}
-*/
 
 void idle()
 {
@@ -89,20 +58,6 @@ void idle()
 	static uint8_t debounceValue = 0;
 	static uint8_t debounceTicks = 0;
 #endif // ENABLE_POWER_SWITCH
-
-	if(g_formatChanged)
-	{
-		changeFormat();
-		g_formatChanged = 0;
-	}
-
-	if(g_cecMessageLength != 0)
-	{
-		cli();
-		processCecMessage();
-		g_cecMessageLength = 0;
-		sei();
-	}
 
 #ifdef ENABLE_POWER_SWITCH
 	if((PIND & (1 << GPIO_POWER_PIN)) == debounceValue)
@@ -517,6 +472,7 @@ const struct
 	{ "RO", cmdRstOutput, "Rst Output:  RO" },
 	{ "GR", cmdGetResult, "Get Result:  GR index" },
 	{ "GS", cmdGetStatus, "Get Status:  GS" },
+	{ "SS", cmdSetStatus, "Set Status:  SS interrupt_mask" },
 	{ "GX", cmdGetAddr,   "Get Address: GX addr count"   },
 	{ "SX", cmdSetAddr,   "Set Address: SX addr byte0 [byte1] [...]"  },
 	{ "R",  cmdRstAll,    "Rst All:     R"    },
@@ -554,6 +510,64 @@ void dispatchCommand(int argc, char** argv)
 
 }
 
+int trig = 0;
+void EXTI2_TSC_IRQHandler()
+{
+	uint8_t interrupts;
+	uint16_t clear = 0xff;
+
+	fpgaConfigRead(AMBILIGHT_BASE_ADDR_INTERRUPT, &interrupts, sizeof(interrupts));
+
+	if(interrupts & 1)
+	{
+		uint8_t cecRxIntState = i2cReadAdvRegister(0x98, 0x93);
+
+		// if this is a CEC RX message 0 ready interupt
+		if(cecRxIntState & 8)
+		{
+			int i;
+
+			// copy the received message
+			g_cecMessageLength = i2cReadAdvRegister(0x80, 0x25);
+			if(g_cecMessageLength > sizeof(g_cecMessage))
+				g_cecMessageLength = sizeof(g_cecMessage);
+			for(i = 0; i < g_cecMessageLength; ++i)
+				g_cecMessage[i] = i2cReadAdvRegister(0x80, 0x15 + i);
+
+			// clear the message buffer ready for a new message
+			i2cWriteAdvRegister(0x80, 0x2C, 0x02);
+
+			// clear the interrupt
+			i2cWriteAdvRegister(0x98, 0x94, 0x08);
+		}
+	}
+	else if(interrupts & 2)
+	{
+		g_formatChanged = 1;
+	}
+
+	fpgaConfigWrite(AMBILIGHT_BASE_ADDR_INTERRUPT, &clear, sizeof(clear));
+	EXTI->PR |= EXTI_PR_PR2;
+}
+
+void intInit()
+{
+	RCC->AHBENR |= RCC_AHBENR_GPIODEN;
+	GPIOD->MODER &= ~GPIO_MODER_MODER2;
+	GPIOD->PUPDR &= ~GPIO_PUPDR_PUPDR2;
+
+	RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
+	SYSCFG->EXTICR[0] &= ~SYSCFG_EXTICR1_EXTI2_Msk;
+	SYSCFG->EXTICR[0] |= SYSCFG_EXTICR1_EXTI2_PD;
+	
+	EXTI->IMR |=  1 << 2;           // enable EXTI2
+	EXTI->RTSR |= EXTI_RTSR_TR2;    // enable rising edge
+	EXTI->FTSR &= ~EXTI_FTSR_TR2;   // disable falling edge
+
+	NVIC_SetPriority(EXTI2_TSC_IRQn, 0x03);
+	NVIC_EnableIRQ(EXTI2_TSC_IRQn);
+}
+
 int main()
 {
 	int i;
@@ -578,6 +592,8 @@ int main()
 	for(i = 0; i < 10000; ++i)
 		asm volatile ("nop");
 
+	intInit();
+
 	i2cInit();
 
 	spiInit();
@@ -597,6 +613,21 @@ uint8_t printit=0;
 	printf("\n> ");
 	while(1)
 	{
+		if(g_formatChanged)
+		{
+			g_formatChanged = 0;
+			printf("format changed\n");
+			changeFormat();
+		}
+
+		if(g_cecMessageLength != 0)
+		{
+			// TODO: replacement for disabling interrupts to ensure that
+			//       the message isn't overwritten while we're processing it
+			processCecMessage();
+			g_cecMessageLength = 0;
+		}
+
 		if((argc = pollCommand(argv, 12)))
 		{
 			printf("\n");
@@ -623,7 +654,7 @@ if(printit)
 {
 				lighthouse_solution_t solution;
 				solveLighthouse(&solution, *angles, ootx);
-static int count = 0;
+//static int count = 0;
 //if(count++ % 100 == 0)
 {
 solution_error_t error;
