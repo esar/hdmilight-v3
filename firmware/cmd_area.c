@@ -48,7 +48,7 @@ void setArea(unsigned int area,
 	data[2] = ((ymin & 0x3f) >> 4) | (ymax << 2);
 	data[3] = shift & 0xf;
 
-	spiWrite(address, data, sizeof(data));
+	fpgaConfigWrite(address, data, sizeof(data));
 }
 
 void cmdSetArea(uint8_t argc, char** argv)
@@ -86,7 +86,7 @@ void cmdGetArea(uint8_t argc, char** argv)
 			uint8_t data[4];
 			int x;
 
-			spiRead(address, data, sizeof(data));
+			fpgaConfigRead(address, data, sizeof(data));
 
 			x = data[0] & 0x3f; // xmin
 			printf("%d: %d ", index, x);

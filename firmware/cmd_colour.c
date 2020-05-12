@@ -46,7 +46,7 @@ void setColour(uint8_t index, uint8_t row, uint32_t r, uint32_t g, uint32_t b)
 	*gdata |= (g & 0x3FFFFUL) << 2;
 	*bdata |= (b & 0x3FFFFUL) << 4;
 	
-	spiWrite(address, data, sizeof(data));
+	fpgaConfigWrite(address, data, sizeof(data));
 }
 
 void getColour(uint8_t index, uint8_t row, uint32_t* r, uint32_t* g, uint32_t* b)
@@ -60,7 +60,7 @@ void getColour(uint8_t index, uint8_t row, uint32_t* r, uint32_t* g, uint32_t* b
 	uint32_t* gdata = (uint32_t*)&data[2];
 	uint32_t* bdata = (uint32_t*)&data[4];
 
-	spiRead(address, data, sizeof(data));
+	fpgaConfigRead(address, data, sizeof(data));
 
 	*r = *rdata & 0x3FFFFUL;
 	*g = (*gdata >> 2) & 0x3FFFFUL;

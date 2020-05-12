@@ -42,7 +42,7 @@ void setOutput(uint8_t output, uint16_t light, uint8_t area, uint8_t coef, uint8
 		enabled = 0x80;
 
 	uint8_t data[2] = { area & 0xff, enabled | ((coef & 15) << 3) | (gamma & 7) };
-	spiWrite(address, data, sizeof(data));
+	fpgaConfigWrite(address, data, sizeof(data));
 }
 
 void getOutput(uint8_t output, uint16_t light, int* area, int* coef, int* gamma, int* enabled)
@@ -52,7 +52,7 @@ void getOutput(uint8_t output, uint16_t light, int* area, int* coef, int* gamma,
 	address += light * 2;
 
 	uint8_t data[2];
-	spiRead(address, data, sizeof(data));
+	fpgaConfigRead(address, data, sizeof(data));
 
 	*area = data[0];
 	*gamma = data[1] & 7;

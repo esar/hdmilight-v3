@@ -98,17 +98,18 @@ uint32_t getfixed_9_9(const char* p);
 int fixed_9_9_fract(int32_t x, int numDigits);
 int fixed_9_9_int(int32_t x);
 
-void dmaRead(uint8_t section, uint16_t src, uint16_t dst, uint16_t len);
-
 void i2cInit();
 uint8_t i2cReadAdvRegister(uint8_t addr, uint8_t subaddr);
 uint8_t i2cWriteAdvRegister(uint8_t addr, uint8_t subaddr, uint8_t value);
 
 void spiInit();
-void spiWrite(uint16_t address, void* data, uint16_t length);
-void spiRead(uint16_t address, void* data, uint16_t length);
-void spiConfigLoad(uint8_t slot);
-uint8_t spiConfigStatus();
+
+void fpgaConfigWrite(uint16_t address, void* data, uint16_t length);
+void fpgaConfigRead(uint16_t address, void* data, uint16_t length);
+void fpgaConfigLoad(uint8_t slot);
+uint8_t fpgaConfigStatus();
+void fpgaFlashRead(uint32_t address, void* data, int length);
+void fpgaFlashWrite(uint32_t address, void* data, int length);
 
 void changeFormat();
 

@@ -54,7 +54,7 @@ void spiInit()
 	RCC->APB1RSTR &= ~RCC_APB1RSTR_SPI3RST;
 
 	// Set clock rate, polarity and phase
-	SPI3->CR1 = (4 << SPI_CR1_BR_Pos); // | SPI_CR1_CPOL | SPI_CR1_CPHA;
+	SPI3->CR1 = (4 << SPI_CR1_BR_Pos) | SPI_CR1_CPOL | SPI_CR1_CPHA;
 
 	// Set as master
 	SPI3->CR1 |= SPI_CR1_MSTR;
@@ -64,8 +64,9 @@ void spiInit()
 	SPI3->CR2 |= SPI_CR2_SSOE | SPI_CR2_FRXTH;
 }
 
-
-void spiWrite(uint16_t address, void* data, uint16_t length)
+void spiTransaction(void* txBuf1, int txBuf1Len,
+                    void* txBuf2, int txBuf2Len,
+                    void* rxBuf, int rxBufLen)
 {
 	volatile uint8_t dummy;
 
@@ -73,79 +74,19 @@ void spiWrite(uint16_t address, void* data, uint16_t length)
 	SPI3->CR1 |= SPI_CR1_SPE;
 	SPI3->CR1 |= SPI_CR1_MSTR;
 
-	// Send write command
-	while(!(SPI3->SR & SPI_SR_TXE))
-		;
-	*(uint8_t*)&SPI3->DR = 0x02;
-
-	// Send address MSB
-	while(!(SPI3->SR & SPI_SR_TXE))
-		;
-	*(uint8_t*)&SPI3->DR = (address >> 8) & 0xff;
-
-	// Send address LSB
-	while(!(SPI3->SR & SPI_SR_TXE))
-		;
-	*(uint8_t*)&SPI3->DR = address & 0xff;
-
-	// Send data
-	while(length--)
+	while(txBuf1Len--)
 	{
 		while(!(SPI3->SR & SPI_SR_TXE))
 			;
-		*(uint8_t*)&SPI3->DR = *(uint8_t*)data++;
+		*(uint8_t*)&SPI3->DR = *(uint8_t*)txBuf1++;
 	}
 
-	// TODO: Is this stil needed?
-	while(!(SPI3->SR & SPI_SR_TXE))
-		;
-	*(uint8_t*)&SPI3->DR = 0;
-
-	// Wait for transmit FIFO to empty
-	while(SPI3->SR & SPI_SR_FTLVL)
-		;
-	// Wait for bus to be idle
-	while(SPI3->SR & SPI_SR_BSY)
-		;
-
-	// Disable SPI
-	SPI3->CR1 &= ~SPI_CR1_SPE;
-
-	// Clear any junk in the RX FIFO
-	while(SPI3->SR & SPI_SR_FRLVL)
-		dummy = SPI3->DR;
-
-	// pretend we used the dummy value to silence the gcc warning
-	(void)dummy;
-}
-
-void spiRead(uint16_t address, void* data, uint16_t length)
-{
-	volatile uint8_t dummy;
-
-	SPI3->SR &= ~SPI_SR_MODF;
-	SPI3->CR1 |= SPI_CR1_SPE;
-	SPI3->CR1 |= SPI_CR1_MSTR;
-
-	// Send read command
-	while(!(SPI3->SR & SPI_SR_TXE))
-		;
-	*(uint8_t*)&SPI3->DR = 0x01;
-
-	// Send address MSB
-	while(!(SPI3->SR & SPI_SR_TXE))
-		;
-	*(uint8_t*)&SPI3->DR = (address >> 8) & 0xff;
-
-	// Send address LSB
-	while(!(SPI3->SR & SPI_SR_TXE))
-		;
-	*(uint8_t*)&SPI3->DR = address & 0xff;
-
-	// Send dummy byte (give the device a few clocks to go get the data)
-	while(!(SPI3->SR & SPI_SR_TXE))
-		;
-	*(uint8_t*)&SPI3->DR = 0;
+	while(txBuf2Len--)
+	{
+		while(!(SPI3->SR & SPI_SR_TXE))
+			;
+		*(uint8_t*)&SPI3->DR = *(uint8_t*)txBuf2++;
+	}
 
 	// Wait for the TX buffer to empty
 	while(SPI3->SR & SPI_SR_FTLVL)
@@ -160,7 +101,7 @@ void spiRead(uint16_t address, void* data, uint16_t length)
 		dummy = SPI3->DR;
 
 	// Read data
-	while(length--)
+	while(rxBufLen--)
 	{
 		// Send dummy byte to clock the data
 		while(!(SPI3->SR & SPI_SR_TXE))
@@ -172,7 +113,7 @@ void spiRead(uint16_t address, void* data, uint16_t length)
 			;
 
 		// Read it
-		*(uint8_t*)data++ = SPI3->DR;
+		*(uint8_t*)rxBuf++ = SPI3->DR;
 	}
 
 	// Follow SPI shutdown procedure, probably unnecessary...
@@ -195,116 +136,42 @@ void spiRead(uint16_t address, void* data, uint16_t length)
 	(void)dummy;
 }
 
-void spiConfigLoad(uint8_t slot)
+void fpgaConfigWrite(uint16_t address, void* data, uint16_t length)
 {
-	volatile uint8_t dummy;
-
-	SPI3->SR &= ~SPI_SR_MODF;
-	SPI3->CR1 |= SPI_CR1_SPE;
-	SPI3->CR1 |= SPI_CR1_MSTR;
-
-	// Send load command
-	while(!(SPI3->SR & SPI_SR_TXE))
-		;
-	*(uint8_t*)&SPI3->DR = 0xa0;
-
-	// Send slot index
-	while(!(SPI3->SR & SPI_SR_TXE))
-		;
-	*(uint8_t*)&SPI3->DR = slot;
-
-	// TODO: Why are these three writes necessary?
-	//       CS seems to be going low too early without them and resetting the 
-	//       state machine in spiSlaveController in the FPGA
-	while(!(SPI3->SR & SPI_SR_TXE))
-		;
-	*(uint8_t*)&SPI3->DR = 1;
-	while(!(SPI3->SR & SPI_SR_TXE))
-		;
-	*(uint8_t*)&SPI3->DR = 1;
-	while(!(SPI3->SR & SPI_SR_TXE))
-		;
-	*(uint8_t*)&SPI3->DR = 0;
-
-	// Wait for transmit FIFO to empty
-	while(SPI3->SR & SPI_SR_FTLVL)
-		;
-	// Wait for bus to be idle
-	while(SPI3->SR & SPI_SR_BSY)
-		;
-
-	// Disable SPI
-	SPI3->CR1 &= ~SPI_CR1_SPE;
-
-	// Clear any junk in the RX FIFO
-	while(SPI3->SR & SPI_SR_FRLVL)
-		dummy = SPI3->DR;
-
-	// pretend we used the dummy value to silence the gcc warning
-	(void)dummy;
+	uint8_t command[] = { 0x02, address >> 8, address & 0xff };
+	spiTransaction(command, sizeof(command), data, length, NULL, 0);
 }
 
-uint8_t spiConfigStatus()
+void fpgaConfigRead(uint16_t address, void* data, uint16_t length)
 {
-	volatile uint8_t dummy;
-	uint8_t data;
-
-	SPI3->SR &= ~SPI_SR_MODF;
-	SPI3->CR1 |= SPI_CR1_SPE;
-	SPI3->CR1 |= SPI_CR1_MSTR;
-
-	// Send status command
-	while(!(SPI3->SR & SPI_SR_TXE))
-		;
-	*(uint8_t*)&SPI3->DR = 0xa2;
-
-	// Send dummy byte (give the device a few clocks to go get the data)
-	while(!(SPI3->SR & SPI_SR_TXE))
-		;
-	*(uint8_t*)&SPI3->DR = 0;
-
-	// Wait for the TX buffer to empty
-	while(SPI3->SR & SPI_SR_FTLVL)
-		;
-
-	// Wait for the bus to be idle
-	while(SPI3->SR & SPI_SR_BSY)
-		;
-
-	// Clear any junk from the RX buffer
-	while(SPI3->SR & SPI_SR_FRLVL)
-		dummy = SPI3->DR;
-
-	// Send dummy byte to clock the data
-	while(!(SPI3->SR & SPI_SR_TXE))
-		;
-	*(uint8_t*)&SPI3->DR = 0;
-
-	// Wait for the data to arrive in the RX FIFO
-	while(!(SPI3->SR & SPI_SR_FRLVL))
-		;
-
-	// Read it
-	data = SPI3->DR;
-
-	// Follow SPI shutdown procedure, probably unnecessary...
-	// Wait for TX FIFO to be empty (should be already)
-	while(SPI3->SR & SPI_SR_FTLVL)
-		;
-
-	// Wait for bus to be idle (should be already)
-	while(SPI3->SR & SPI_SR_BSY)
-		;
-
-	// Disable SPI
-	SPI3->CR1 &= ~SPI_CR1_SPE;
-
-	// Clear any junk from the RX FIFO
-	while(SPI3->SR & SPI_SR_FRLVL)
-		dummy = SPI3->DR;
-
-	// pretend we used the dummy value to silence the gcc warning
-	(void)dummy;
-
-	return data;
+	uint8_t command[] = { 0x01, address >> 8, address & 0xff, 0 };
+	spiTransaction(command, sizeof(command), NULL, 0, data, length);
 }
+
+void fpgaConfigLoad(uint8_t slot)
+{
+	// TODO: Why does this need the last three bytes (1, 1, 0) ?
+	uint8_t command[] = { 0xa0, slot + 1, 1, 1, 0 };
+	spiTransaction(command, sizeof(command), NULL, 0, NULL, 0);
+}
+
+uint8_t fpgaConfigStatus()
+{
+	uint8_t status;
+	uint8_t command[] = { 0xa2, 0 };
+	spiTransaction(command, sizeof(command), NULL, 0, &status, sizeof(status));
+	return status;
+}
+
+void fpgaFlashRead(uint32_t address, void* data, int length)
+{
+	uint8_t passthru_command[] = { 0xb0, 0 };
+	uint8_t command[] = { 0x03, (address >> 16) & 0xff, (address >> 8) & 0xff, address & 0xff };
+	spiTransaction(passthru_command, sizeof(passthru_command), NULL, 0, NULL, 0);
+	spiTransaction(command, sizeof(command), NULL, 0, data, length);
+}
+
+void fpgaFlashWrite(uint32_t address, void* data, int length)
+{
+}
+

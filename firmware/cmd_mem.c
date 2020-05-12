@@ -31,60 +31,36 @@ void cmdGetMem(uint8_t argc, char** argv)
 	if(argc == 2)
 	{
 		uint32_t config = getint(&argv[1]);
-		uint8_t status = 0;
-		uint32_t count;
-
-		// first slot contains format table, so step over it
-		config += 1;
 
 		printf("loading config...\n");
-		spiConfigLoad(config);
-		while(spiConfigStatus() & 1 != 0)
+		fpgaConfigLoad(config);
+		while((fpgaConfigStatus() & 1) != 0)
 			;
 		printf("done.\n");
-
-		//for(count = 0; count < 32; ++count)
-		//{
-		//	status = spiConfigStatus();
-		//	printf("status: %u\n", status);
-		//}
 	}
-/*
-	else if(argc == 5)
+	else if(argc == 4)
 	{
 		uint16_t sec = getint(&argv[1]);
 		uint16_t src = getint(&argv[2]);
-		uint16_t dst = getint(&argv[3]);
-		uint16_t len = getint(&argv[4]);
+		uint16_t len = getint(&argv[3]);
 
+		static uint8_t buf[18];
+		uint16_t pos;
 
-		if(dst != 0)
+		printf("dumping %04x bytes from %04x%04x...\n", len, sec, src);
+
+		for(pos = 0; pos < len; pos += 16, src += 16)
 		{
-			printf("copying %04x bytes from %04x%04x to %04x...\n", len, sec, src, dst);
-			dmaRead(sec, src, dst, len);
-		}
-		else
-		{
-			static uint8_t buf[18];
-			uint16_t pos;
+			int i;
 
-			printf("dumping %04x%04x bytes from %04x...\n", sec, len, src);
+			fpgaFlashRead((sec << 16) + src, buf, 16);
 
-			dst = (uint16_t)(&buf);
-			for(pos = 0; pos < len; pos += 16, src += 16)
-			{
-				int i;
-
-				dmaRead(sec, src, dst, 16);
-
-				printf("%04x ", pos);
-				for(i = 0; i < 16; ++i)
-					printf("%02x ", (unsigned int)buf[i]);
-				printf("\n");
-			}
+			printf("%04x ", pos);
+			for(i = 0; i < 16; ++i)
+				printf("%02x ", (unsigned int)buf[i]);
+			printf("\n");
 		}
 
 		printf("\ndone.\n");
 	}
-*/
 }

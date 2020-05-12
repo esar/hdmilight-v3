@@ -68,13 +68,12 @@ static uint16_t g_currentHeight = 0xffff;
 
 uint16_t getConfig(uint16_t width, uint16_t height, uint16_t ratio)
 {
-/*
 	FormatConfig config;
 	int offset = 0;
 	
 	do
 	{
-		dmaRead(0, offset, (uint16_t)&config, sizeof(config));
+		fpgaFlashRead(offset, &config, sizeof(config));
 		if(config.width  >= width  - X_RES_FUZZ && config.width  <= width  + X_RES_FUZZ && 
 		   config.height >= height - Y_RES_FUZZ && config.height <= height + Y_RES_FUZZ &&
 		   config.ratio == ratio)
@@ -85,7 +84,6 @@ uint16_t getConfig(uint16_t width, uint16_t height, uint16_t ratio)
 		offset += sizeof(config);
 		
 	} while(config.width != 0);
-*/
 
 	return 0xffff;
 }
@@ -125,7 +123,7 @@ void changeFormat()
 
 	} __attribute__((packed)) format;
 
-	spiRead(AMBILIGHT_BASE_ADDR_FORMAT, &format, sizeof(format));
+	fpgaConfigRead(AMBILIGHT_BASE_ADDR_FORMAT, &format, sizeof(format));
 
 
 	if(format.xSize < g_currentWidth  - X_RES_FUZZ ||
@@ -192,11 +190,7 @@ void changeFormat()
 			
 		config = getConfig(g_currentWidth, g_currentHeight, g_currentRatio);
 		if(config != 0xffff && g_formatChangeEnabled)
-		{
-			config += 1;
-			config *= 0x8000;
-			//dmaRead(config >> 16, config & 0xffff, 0x8000, 0x8000);
-		}
+			fpgaConfigLoad(config);
 	}
 }	
 
@@ -219,7 +213,7 @@ void cmdGetFormat(uint8_t argc, char** argv)
 		changeFormat();
 
 		uint16_t data[6];
-		spiRead(AMBILIGHT_BASE_ADDR_FORMAT, data, sizeof(data));
+		fpgaConfigRead(AMBILIGHT_BASE_ADDR_FORMAT, data, sizeof(data));
 		printf("raw: %d %d %d %d %d %d\n", data[0], data[1], data[2], data[3], data[4], data[5]);
 		printf("fmt: %dx%d %s (%d)\n", g_currentWidth, g_currentHeight, 
 		                                       g_ratios[g_currentRatio].name, g_currentRatio);

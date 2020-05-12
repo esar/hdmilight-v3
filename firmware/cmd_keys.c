@@ -112,12 +112,11 @@ void processCecMessage()
 		printf("%02x ", g_cecMessage[i]);
 	printf("\n");
 
-/*
 	if(g_cecMessage[1] == CEC_OP_USER_CONTROL_PRESSED)
 	{
 		uint8_t action;
 
-		dmaRead(0, 0x7f00 + g_cecMessage[2], (uint16_t)&action, sizeof(action));
+		fpgaFlashRead(0x7f00 + g_cecMessage[2], &action, sizeof(action));
 		
 		if(action == ACTION_POWER_TOGGLE)
 			togglePower();
@@ -136,14 +135,9 @@ void processCecMessage()
 			uint32_t config = action - ACTION_CONFIG_0;
 
 			printf("config %lu\n", config);
-
-			config += 1;
-			config *= 0x8000;
-			cmdDisFormat(0, NULL);
-			dmaRead(config >> 16, config & 0xffff, 0x8000, 0x8000);
+			fpgaConfigLoad(config);
 		}
 	}
-*/
 }
 
 

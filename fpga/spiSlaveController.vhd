@@ -5,12 +5,15 @@
 --   0xa0: Read config from flash: | flash_slot |
 --   0xa1: Write config to flash:  | flash_slot |
 --   0xa2: Read flash transfer status: | bit0: 0=idle, 1=transfer in progress |
+--   0xb0: Enable pass through to flash chip for next transaction
 
 
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
+library UNISIM;
+use UNISIM.vcomponents.all;
 
 
 entity spiSlaveController is
@@ -55,6 +58,7 @@ architecture Behavioral of spiSlaveController is
 	constant CMD_FLASH_RESTORE : std_logic_vector(7 downto 0) := "10100000";
 	constant CMD_FLASH_SAVE    : std_logic_vector(7 downto 0) := "10100001";
 	constant CMD_FLASH_STATUS  : std_logic_vector(7 downto 0) := "10100010";
+	constant CMD_FLASH_PASSTHRU: std_logic_vector(7 downto 0) := "10110000";
 
 	signal state     : StateType := STATE_CMD;
 	signal tx_src    : SrcType;
@@ -81,9 +85,22 @@ architecture Behavioral of spiSlaveController is
 	signal flash_dma_we         : std_logic;
 	signal flash_dma_addr       : std_logic_vector(15 downto 0);
 	signal flash_dma_data_out   : std_logic_vector(7 downto 0);
+	signal flash_dma_spi_clk    : std_logic;
+	signal flash_dma_spi_cs     : std_logic;
+	signal flash_dma_spi_mosi   : std_logic;
+
+	signal spi_slave_miso       : std_logic;
+
+	signal flash_passthru_trigger     : std_logic;
+	signal flash_passthru_enable_next : std_logic;
+	signal flash_passthru_enabled     : std_logic;
+	signal spi_cs_last : std_logic;
+
+	signal flash_spi_clk_int : std_logic;
+	signal flash_spi_cs_int  : std_logic;
 begin
 	slave : entity work.spiSlave port map(
-		spi_clk, spi_cs, spi_mosi, spi_miso, rx_data, tx_data, byte_ready
+		spi_clk, spi_cs, spi_mosi, spi_slave_miso, rx_data, tx_data, byte_ready
 	);
 	
 	flashdma : entity work.flashDMAController port map(
@@ -98,9 +115,9 @@ begin
 		flash_dma_addr,
 		config_data_in,
 		flash_dma_data_out,
-		flash_spi_clk,
-		flash_spi_cs,
-		flash_spi_mosi,
+		flash_dma_spi_clk,
+		flash_dma_spi_cs,
+		flash_dma_spi_mosi,
 		flash_spi_miso
 	);
 
@@ -129,6 +146,31 @@ begin
 		end if;
 	end process;
 
+
+	-- If flash_passthru_trigger is asserted then set flash_passtru_enabled
+	-- from the time this current transaction ends until the next transaction ends
+	-- This will redirect the SPI signals to the flash chip for the duration of the
+	-- next transaction.
+	process(clk)
+	begin
+		if(rising_edge(clk)) then
+			if(flash_passthru_trigger = '1') then
+				flash_passthru_enable_next <= '1';
+			end if;
+
+			if(spi_cs = '1' and spi_cs_last = '0') then
+				if(flash_passthru_enable_next = '1') then
+					flash_passthru_enabled <= '1';
+				else
+					flash_passthru_enabled <= '0';
+				end if;
+				flash_passthru_enable_next <= '0';
+			end if;
+			spi_cs_last <= spi_cs;
+		end if;
+	end process;
+
+
 	process(spi_cs, clk)
 	begin
 		if spi_cs = '1' then
@@ -140,6 +182,7 @@ begin
 			addr_lsb_load <= '0';
 			addr_inc <= '0';
 			flash_dma_start <= '0';
+			flash_passthru_trigger <= '0';
 
 			if step = '1' then
 				case state is
@@ -153,9 +196,11 @@ begin
 								state <= STATE_FLASH_SAVE_ADDR;
 							when CMD_FLASH_RESTORE =>
 								state <= STATE_FLASH_RESTORE_ADDR;
-								--state <= STATE_FLASH_DMA;
 							when CMD_FLASH_STATUS =>
 								tx_src <= TX_SRC_FLASH_TRANSFER_STATUS;
+								state <= STATE_NONE;
+							when CMD_FLASH_PASSTHRU =>
+								flash_passthru_trigger <= '1';
 								state <= STATE_NONE;
 							when others =>
 								state <= STATE_NONE;
@@ -204,6 +249,9 @@ begin
 		end if;
 	end process;
 
+
+	-- Mux the configuration memory bus signals, switching them over to the 
+	-- flash DMA controller when a transfer is in progress.
 	tx_data <= config_data_in               when tx_src = TX_SRC_CONFIG else
 	           "0000000" & flash_dma_busy   when tx_src = TX_SRC_FLASH_TRANSFER_STATUS else
 	           "00000000";
@@ -216,4 +264,49 @@ begin
 							  
 	config_data_we <=   we                  when flash_dma_busy = '0' else
 	                    flash_dma_we;
+
+
+	-- Mux all of the SPI signals, switching them to the flash chip when
+	-- the pass through mode is enabled.	
+	flash_spi_cs       <= flash_spi_cs_int;
+	flash_spi_cs_int   <= spi_cs         when flash_passthru_enabled = '1' else
+	                      flash_dma_spi_cs;
+	flash_spi_mosi     <= spi_mosi       when flash_passthru_enabled = '1' else
+	                      flash_dma_spi_mosi;
+	spi_miso           <= flash_spi_miso when flash_passthru_enabled = '1' else
+	                      spi_slave_miso;
+
+	clk_mux : BUFGMUX
+	generic map
+	(
+		CLK_SEL_TYPE => "ASYNC"
+	)
+	port map
+	(
+			O => flash_spi_clk_int,
+			I0 => flash_dma_spi_clk,
+			I1 => spi_clk,
+			S => flash_passthru_enabled
+	);
+
+
+	-- output the SPI clock to the flash chip,
+	-- gating it with spi_cs so it's forced high when spi_cs is high
+	clk_fwd : ODDR2
+		generic map
+		(
+			DDR_ALIGNMENT => "NONE",
+			INIT => '1',
+			SRTYPE => "ASYNC"
+		)
+		port map
+		(
+			Q => flash_spi_clk, 
+			C0 => flash_spi_clk_int,
+			C1 => not flash_spi_clk_int, 
+			D0 => '1', 
+			D1 => '0',
+			S => flash_spi_cs_int
+		);
+
 end Behavioral;

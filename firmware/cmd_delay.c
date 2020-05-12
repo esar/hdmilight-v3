@@ -36,7 +36,7 @@ void cmdGetDelay(uint8_t argc, char** argv)
 		uint16_t address = AMBILIGHT_BASE_ADDR_DELAY;
 		uint8_t data[6];
 
-		spiRead(address, data, sizeof(data));
+		fpgaConfigRead(address, data, sizeof(data));
 
 		frames = data[0];
 		ticks  = data[1];
@@ -71,7 +71,7 @@ void cmdSetDelay(uint8_t argc, char** argv)
 		data[4] = temporalSmoothingRatio >> 8;
 		data[5] = temporalSmoothingRatio & 0xff;
 
-		spiWrite(address, data, sizeof(data));
+		fpgaConfigWrite(address, data, sizeof(data));
 	}
 }
 
@@ -79,6 +79,6 @@ void cmdRstDelay(uint8_t argc, char** argv)
 {
 	uint8_t data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
-	spiWrite(AMBILIGHT_BASE_ADDR_DELAY, data, sizeof(data));
+	fpgaConfigWrite(AMBILIGHT_BASE_ADDR_DELAY, data, sizeof(data));
 }
 

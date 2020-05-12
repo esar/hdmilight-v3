@@ -63,6 +63,7 @@ architecture Behavioral of flashDMAController is
 	signal nextState : StateType;
 	signal shiftOut  : std_logic_vector(7 downto 0);
 	signal shiftIn   : std_logic_vector(7 downto 0);
+	signal txData    : std_logic_vector(7 downto 0);
 	signal count     : std_logic_vector(2 downto 0);
 	signal flashAddr : std_logic_vector(23 downto 0);
 	signal bytesLeft : std_logic_vector(15 downto 0);
@@ -80,10 +81,20 @@ end process;
 
 process(clk)
 begin
+	if(falling_edge(clk)) then
+		if(count = "000") then
+			shiftOut <= txData;
+		else
+			shiftOut <= shiftOut(6 downto 0) & '0';
+		end if;
+	end if;
+end process;
+
+process(clk)
+begin
 	if(rising_edge(clk)) then
 		intWe   <= '0';
 	
-		shiftOut <= shiftOut(6 downto 0) & '0';
 		shiftIn  <= shiftIn(6 downto 0) & spiSo;
 		count    <= std_logic_vector(unsigned(count) + 1);
 	
@@ -106,27 +117,27 @@ begin
 					if(nextState = STATE_READ_CMD) then
 						intSpiCs  <= '0';
 					end if;
-					shiftOut  <= x"0B";
+					txData    <= x"0B";
 					count     <= "000";
 					nextState <= STATE_READ_CMD;
 				when STATE_READ_CMD =>
 					if(count = "111") then
-						shiftOut  <= flashAddr(23 downto 16);
+						txData    <= flashAddr(23 downto 16);
 						nextState <= STATE_READ_ADDR1;
 					end if;
 				when STATE_READ_ADDR1 =>
 					if(count = "111") then
-						shiftOut  <= flashAddr(15 downto 8);
+						txData    <= flashAddr(15 downto 8);
 						nextState <= STATE_READ_ADDR2;
 					end if;
 				when STATE_READ_ADDR2 =>
 					if(count = "111") then
-						shiftOut  <= flashAddr(7 downto 0);
+						txData  <= flashAddr(7 downto 0);
 						nextState <= STATE_READ_ADDR3;
 					end if;
 				when STATE_READ_ADDR3 =>
 					if(count = "111") then
-						shiftOut  <= x"00";
+						txData  <= x"00";
 						nextState <= STATE_READ_ADDR4;
 					end if;
 				when STATE_READ_ADDR4 =>
@@ -154,7 +165,7 @@ begin
 					nextState <= STATE_IDLE;
 				--when STATE_WRITE_INIT =>
 				--	intSpiCs     <= '0';
-				--	shiftOut  <= x"0B";
+				--	txData    <= x"0B";
 				--	count     <= (others => '0');
 				--	nextState <= STATE_WRITE_ENABLE_CMD;
 				--when STATE_WRITE_ENABLE_CMD =>
@@ -164,21 +175,21 @@ begin
 				--	end if;
 				--when STATE_WRITE_ERASE_INIT =>
 				--	intSpiCs     <= '0';
-				--	shiftOut  <= x"0E";
+				--	txData    <= x"0E";
 				--	nextState <= STATE_WRITE_ERASE_CMD;
 				--when STATE_WRITE_ERASE_CMD =>
 				--	if(count = "111") then
-				--		shiftOut  <= flashAddr(23 downto 0);
+				--		txData    <= flashAddr(23 downto 0);
 				--		nextState <= STATE_WRITE_ERASE_ADDR1;
 				--	end if;
 				--when STATE_WRITE_ERASE_ADDR1 =>
 				--	if(count = "111") then
-				--		shiftOut  <= flashAddr(16 downto  8);
+				--		txData    <= flashAddr(16 downto  8);
 				--		nextState <= STATE_WRITE_ERASE_ADDR2;
 				--	end if;
 				--when STATE_WRITE_ERASE_ADDR2 =>
 				--	if(count = "111") then
-				--		shiftOut  <= flashAddr( 7 downto  0);
+				--		txData    <= flashAddr( 7 downto  0);
 				--		nextState <= STATE_WRITE_ERASE_ADDR3;
 				--	end if;
 				--when STATE_WRITE_ERASE_ADDR3 =>
@@ -188,7 +199,7 @@ begin
 				--	end if;
 				--when STATE_WRITE_PROG_INIT =>
 				--	intSpiCs <= '0';
-				--	shiftOut <= x"13";
+				--	txData   <= x"13";
 				--	nextState <= STATE_WRITE_PROG_CMD;
 				--when STATE_WRITE_PROG_CMD =>
 				--	if(count = "111") then
@@ -198,22 +209,7 @@ begin
 	end if;
 end process;
 
-clk_fwd : ODDR2
-	generic map
-	(
-		DDR_ALIGNMENT => "NONE",
-		INIT => '1',
-		SRTYPE => "SYNC"
-	)
-	port map
-	(
-		Q => spiClk, 
-		C0 => clk,
-		C1 => not clk, 
-		D0 => '1', 
-		D1 => '0',
-		S => intSpiCs
-	);
+spiClk <= clk;
 
 busy  <= not intSpiCs;
 we    <= intWe;

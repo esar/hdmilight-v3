@@ -47,17 +47,17 @@ void cmdGetResult(uint8_t argc, char** argv)
 				uint8_t i;
 				uint8_t data;
 
-				spiWrite(AMBILIGHT_BASE_ADDR_RESULT, &index, sizeof(index));
+				fpgaConfigWrite(AMBILIGHT_BASE_ADDR_RESULT, &index, sizeof(index));
 
 				do
 				{
-					spiRead(AMBILIGHT_BASE_ADDR_STATUS, &data, sizeof(data));
+					fpgaConfigRead(AMBILIGHT_BASE_ADDR_STATUS, &data, sizeof(data));
 				} while((data & 1) == 0);
 
 				printf("%d: ", index);
 				for(i = 0; i < 12; ++i)
 				{
-					spiRead(AMBILIGHT_BASE_ADDR_RESULT + 4 + i, &data, sizeof(data));
+					fpgaConfigRead(AMBILIGHT_BASE_ADDR_RESULT + 4 + i, &data, sizeof(data));
 					printf("%d ", data);
 				}
 				printf(" \n");

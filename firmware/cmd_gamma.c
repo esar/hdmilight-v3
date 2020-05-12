@@ -40,7 +40,7 @@ void setGamma(uint8_t channel, uint8_t table, uint8_t index, uint8_t value)
 	address += (uint16_t)table * 256;
 	address += index;
 
-	spiWrite(address, &value, sizeof(value));
+	fpgaConfigWrite(address, &value, sizeof(value));
 }
 
 void cmdGetGamma(uint8_t argc, char** argv)
@@ -73,7 +73,7 @@ void cmdGetGamma(uint8_t argc, char** argv)
 					address += (uint16_t)table * 256;
 					address += index;
 
-					spiRead(address, &value, sizeof(value));
+					fpgaConfigRead(address, &value, sizeof(value));
 
 					printf("%d: %d: %d: %d\n", table, channel, index, value);
 

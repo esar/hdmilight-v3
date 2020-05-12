@@ -29,6 +29,6 @@
 void cmdGetStatus(uint8_t argc, char** argv)
 {
 	uint8_t status;
-	spiRead(AMBILIGHT_BASE_ADDR_STATUS, &status, sizeof(status));
+	fpgaConfigRead(AMBILIGHT_BASE_ADDR_STATUS, &status, sizeof(status));
 	printf("status: %d\n", status);
 }
