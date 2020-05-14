@@ -360,12 +360,13 @@ begin
 			yPreActiveCfgClk   <= yPreActiveReg;
 			yPostActiveCfgClk  <= yPostActiveReg;
 
-			if(xSizeCfgClkPrev       /= xSizeCfgClk or
-			   xPreActiveCfgClkPrev  /= xPreActiveCfgClk or
-			   xPostActiveCfgClkPrev /= xPostActiveCfgClk or
-			   ySizeCfgClkPrev       /= ySizeCfgClk or
-			   yPreActiveCfgClkPrev  /= yPreActiveCfgClk or
-			   yPostActiveCfgClkPrev /= yPostActiveCfgClk) then
+			-- ignore bottom 3 bits to reduce triggering on tiny changes and/or noise
+			if(xSizeCfgClkPrev(11 downto 3)       /= xSizeCfgClk(11 downto 3) or
+			   xPreActiveCfgClkPrev(11 downto 3)  /= xPreActiveCfgClk(11 downto 3) or
+			   xPostActiveCfgClkPrev(11 downto 3) /= xPostActiveCfgClk(11 downto 3) or
+			   ySizeCfgClkPrev(10 downto 3)       /= ySizeCfgClk(10 downto 3) or
+			   yPreActiveCfgClkPrev(10 downto 3)  /= yPreActiveCfgClk(10 downto 3) or
+			   yPostActiveCfgClkPrev(10 downto 3) /= yPostActiveCfgClk(10 downto 3)) then
 				formatChanged <= '1';
 			end if;
 		end if;

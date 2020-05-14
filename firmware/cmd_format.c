@@ -73,7 +73,7 @@ uint16_t getConfig(uint16_t width, uint16_t height, uint16_t ratio)
 	
 	do
 	{
-		fpgaFlashRead(offset, &config, sizeof(config));
+		fpgaFlashRead(AMBILIGHT_FLASH_CONFIG_OFFSET + offset, &config, sizeof(config));
 		if(config.width  >= width  - X_RES_FUZZ && config.width  <= width  + X_RES_FUZZ && 
 		   config.height >= height - Y_RES_FUZZ && config.height <= height + Y_RES_FUZZ &&
 		   config.ratio == ratio)

@@ -116,7 +116,7 @@ void processCecMessage()
 	{
 		uint8_t action;
 
-		fpgaFlashRead(0x7f00 + g_cecMessage[2], &action, sizeof(action));
+		fpgaFlashRead(AMBILIGHT_FLASH_CONFIG_OFFSET + 0x7f00 + g_cecMessage[2], &action, sizeof(action));
 		
 		if(action == ACTION_POWER_TOGGLE)
 			togglePower();

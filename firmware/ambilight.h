@@ -22,21 +22,6 @@
 
 #define BELL    '\a'
 
-#ifdef PORTD
-#undef PORTD
-#endif
-
-#ifdef PIND
-#undef PIND
-#endif
-
-#ifdef DDRD
-#undef DDRD
-#endif
-
-#define DDRD     _SFR_IO8(0x29)
-#define PIND     _SFR_IO8(0x2a)
-#define PORTD    _SFR_IO8(0x2b)
 
 #define AMBILIGHT_BASE_ADDR_OUTPUT 0x0000
 #define AMBILIGHT_BASE_ADDR_COLOUR 0x2000
@@ -50,15 +35,7 @@
 #define AMBILIGHT_BASE_ADDR_FORMAT 0x7000
 #define AMBILIGHT_BASE_ADDR_INTERRUPT 0x7800
 
-#define DMA_FLASH_ADDR_H    _SFR_IO8(0x2c)
-#define DMA_FLASH_ADDR_M    _SFR_IO8(0x2d)
-#define DMA_FLASH_ADDR_L    _SFR_IO8(0x2e)
-#define DMA_SRAM_ADDR_H     _SFR_IO8(0x2f)
-#define DMA_SRAM_ADDR_L     _SFR_IO8(0x30)
-#define DMA_LEN_H           _SFR_IO8(0x31)
-#define DMA_LEN_L           _SFR_IO8(0x32)
-#define DMA_START           _SFR_IO8(0x33)
-#define INT_CLEAR           _SFR_IO8(0x34)
+#define AMBILIGHT_FLASH_CONFIG_OFFSET 0x60000
 
 #define ACTION_NONE           0
 #define ACTION_POWER_TOGGLE    1
@@ -80,9 +57,6 @@
 #define ACTION_ADJUST_CONTRAST   17
 #define ACTION_ADJUST_SATURATION 18
 #define ACTION_ADJUST_HUE        19
-
-#define GPIO_POWER_PIN         0
-#define DEBOUNCE_TICK_COUNT    16
 
 
 extern uint8_t silent;
