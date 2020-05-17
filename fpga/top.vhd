@@ -52,9 +52,6 @@ entity HdmilightTop is
 
 		ADV_RST : inout std_logic;  -- must be inout for tristate 'Z' to work
 
-		MCU_I2C_SCL : inout std_logic;
-		MCU_I2C_SDA : inout std_logic;
-
 		MCU_SPI_CLK  : in std_logic;
 		MCU_SPI_MISO : inout std_logic;
 		MCU_SPI_MOSI : in std_logic;
@@ -69,7 +66,6 @@ entity HdmilightTop is
 		FLASH_SO : in  std_logic;
 
 		MCU_PD2 : inout std_logic;
-		MCU_PB5 : inout std_logic;
 		MCU_PB8 : inout std_logic;
 
 		VIVEPOS_SENSOR : in std_logic_vector(3 downto 0);
@@ -82,7 +78,7 @@ entity HdmilightTop is
 
 		GPIO : inout std_logic_vector(7 downto 0);
 		
-		ROUTE_UNDER : inout std_logic_vector(5 downto 0)
+		ROUTE_UNDER : inout std_logic_vector(1 downto 0)
 	);
 end HdmilightTop;
 
@@ -222,11 +218,8 @@ PAPIX_RGB <= (others => '0');
 
 ADV_SCL <= 'Z';
 ADV_SDA <= 'Z';
-MCU_I2C_SCL <= 'Z';
-MCU_I2C_SDA <= 'Z';
 
 MCU_PD2 <= interruptOut;
-MCU_PB5 <= 'Z';
 MCU_PB8 <= 'Z';
 
 GPIO(0) <= MCU_SPI_CLK;
