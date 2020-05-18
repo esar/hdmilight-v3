@@ -49,7 +49,11 @@ ARCHITECTURE behavior OF test_spi IS
          config_data_in : IN  std_logic_vector(7 downto 0);
          config_data_out : OUT  std_logic_vector(7 downto 0);
          config_data_addr : OUT  std_logic_vector(15 downto 0);
-         config_data_we : OUT  std_logic
+         config_data_we : OUT  std_logic;
+         flash_spi_clk  : OUT std_logic;
+         flash_spi_cs   : OUT std_logic;
+         flash_spi_mosi : OUT std_logic;
+         flash_spi_miso : IN  std_logic
         );
     END COMPONENT;
     
@@ -60,16 +64,21 @@ ARCHITECTURE behavior OF test_spi IS
    signal spi_cs : std_logic := '0';
    signal spi_mosi : std_logic := '0';
    signal config_data_in : std_logic_vector(7 downto 0) := (others => '0');
+	signal flash_spi_miso :std_logic := '0';
 
  	--Outputs
    signal spi_miso : std_logic;
    signal config_data_out : std_logic_vector(7 downto 0);
    signal config_data_addr : std_logic_vector(15 downto 0);
    signal config_data_we : std_logic;
+	signal flash_spi_clk : std_logic;
+	signal flash_spi_cs : std_logic;
+	signal flash_spi_mosi : std_logic;
 
    -- Clock period definitions
    constant clk_period : time := 62.5 ns;    -- 16MHz
-   constant spi_clk_period : time := 66.6 ns;  -- 15MHz
+   --constant spi_clk_period : time := 66.6 ns;  -- 15MHz
+   constant spi_clk_period : time := 625 ns;  -- 1.6MHz
  
 	signal input_byte : std_logic_vector(7 downto 0);
 	
@@ -86,7 +95,11 @@ BEGIN
           config_data_in => config_data_in,
           config_data_out => config_data_out,
           config_data_addr => config_data_addr,
-          config_data_we => config_data_we
+          config_data_we => config_data_we,
+			 flash_spi_clk => flash_spi_clk,
+			 flash_spi_cs => flash_spi_cs,
+			 flash_spi_mosi => flash_spi_mosi,
+			 flash_spi_miso => flash_spi_miso
         );
 
    -- Clock process definitions

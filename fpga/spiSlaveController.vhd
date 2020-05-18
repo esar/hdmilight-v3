@@ -68,8 +68,11 @@ architecture Behavioral of spiSlaveController is
 
 	signal byte_ready      : std_logic;
 	signal byte_ready_sync : std_logic_vector(2 downto 0);
+	signal spi_cs_sync     : std_logic_vector(2 downto 0);
 
-	signal step            : std_logic;
+	signal transaction_start : std_logic;
+	signal transaction_end   : std_logic;
+	signal step              : std_logic;
 
 	signal addr         : std_logic_vector(15 downto 0);
 	
@@ -122,6 +125,17 @@ begin
 	);
 
 
+	-- Synchronise spi_cs to our clock and generate signals at the start and end of a transaction
+	process(clk)
+	begin
+		if rising_edge(clk) then
+			spi_cs_sync <= spi_cs_sync(1 downto 0) & spi_cs;
+		end if;
+	end process;
+	transaction_start <= '1' when spi_cs_sync(2) = '1' and spi_cs_sync(1) = '0' else '0';
+	transaction_end   <= '1' when spi_cs_sync(2) = '0' and spi_cs_sync(1) = '1' else '0';
+
+
 	-- It's safe to process the new rx byte, and safe to load a new tx byte, on the falling edge of tx_busy. 
 	-- So we'll synchronise that to the main clock, and use it to step the state machine
 	process(clk)
@@ -158,7 +172,7 @@ begin
 				flash_passthru_enable_next <= '1';
 			end if;
 
-			if(spi_cs = '1' and spi_cs_last = '0') then
+			if(transaction_end = '1') then
 				if(flash_passthru_enable_next = '1') then
 					flash_passthru_enabled <= '1';
 				else
@@ -171,9 +185,9 @@ begin
 	end process;
 
 
-	process(spi_cs, clk)
+	process(clk)
 	begin
-		if spi_cs = '1' then
+		if transaction_start = '1' then
 			state <= STATE_CMD;
 			tx_src <= TX_SRC_NONE;
 		elsif rising_edge(clk) then

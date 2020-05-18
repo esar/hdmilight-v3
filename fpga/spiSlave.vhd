@@ -36,20 +36,28 @@ begin
 
 
 	-- Shift in MOSI on rising edge of SPI clock
+	-- Only shift in if CS is low so we freeze the last data at the end of
+	-- the transaction. Otherwise if spi_clk keeps running then we could
+	-- keep latching new data, overwriting what we signaled as ready to read
 	process(spi_clk)
 	begin
 		if(rising_edge(spi_clk)) then
-			shiftin <= shiftin(6 downto 0) & spi_mosi;
+			if spi_cs = '0' then
+				shiftin <= shiftin(6 downto 0) & spi_mosi;
+			end if;
 		end if;
 	end process;
 
 
 	-- Latch received data when we have a whole byte
+	-- Note we're grabbing the value at the same time that it goes into the
+	-- shift register so that we don't delay latching by 1 clock and get it
+	-- before the spi_clk stops at the end of the transaction when cs goes high
 	process(spi_clk)
 	begin
 		if rising_edge(spi_clk) then
-			if bitcount = "111" then
-				rx_data <= shiftin;
+			if (bitcount = "110") then
+				rx_data <= shiftin(6 downto 0) & spi_mosi;
 			end if;
 		end if;
 	end process;
@@ -91,7 +99,9 @@ begin
 	process(spi_cs, spi_clk)
 	begin
 		if spi_cs = '1' then
-			byte_ready <= '0';
+			-- Force byte ready at the end of the transaction
+			-- spi_clk may stop which will stop the rising edge that we're waiting for below
+			byte_ready <= '1';
 		elsif rising_edge(spi_clk) then
 			if first = '0' and bitcount = "111" then
 				byte_ready <= '1';
