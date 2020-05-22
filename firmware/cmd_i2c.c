@@ -25,16 +25,12 @@
 #include "printf.h"
 #include "ambilight.h"
 
-#include "config_hdmi.h"
-#include "config_edid.h"
-
-
 
 void cmdSetI2C(uint8_t argc, char** argv)
 {
 	if(argc == 4)
 	{
-		i2cWriteAdvRegister(getint(&argv[1]), getint(&argv[2]), getint(&argv[3]));
+		adv7611WriteRegister(getint(&argv[1]), getint(&argv[2]), getint(&argv[3]));
 		printf("OK\n");
 	}
 }
@@ -43,13 +39,13 @@ void cmdGetI2C(uint8_t argc, char** argv)
 {
 	if(argc == 3)
 	{
-		int val = i2cReadAdvRegister(getint(&argv[1]), getint(&argv[2]));
+		int val = adv7611ReadRegister(getint(&argv[1]), getint(&argv[2]));
 		printf("Read: %d (0x%02x)\n", val, val);
 	}
 	else if(argc == 4)
 	{
 		uint8_t minBit, maxBit;
-		int val = i2cReadAdvRegister(getint(&argv[1]), getint(&argv[2]));
+		int val = adv7611ReadRegister(getint(&argv[1]), getint(&argv[2]));
 		
 		getrange(argv[3], &minBit, &maxBit);
 		if(maxBit < minBit)
@@ -66,34 +62,9 @@ void cmdGetI2C(uint8_t argc, char** argv)
 	}
 }
 
-void writeEdid(const char* edid, int length)
-{
-	int i;
-
-	for(i = 0; i < length; ++i)
-		i2cWriteAdvRegister(0x6c, i, edid[i]);
-}
-
-void writeConfig(const struct ConfigTable* table)
-{
-	const struct ConfigTable* p;
-
-	for(p = table; p->address != 0; ++p)
-	{
-		if(!silent)
-		{
-			printf("%x %x %x : ", p->address, p->subaddress, p->data);
-			uint8_t ack = i2cWriteAdvRegister(p->address, p->subaddress, p->data);
-			printf("%s\n", ack ? "ACK" : "NACK");
-		}
-		else
-			i2cWriteAdvRegister(p->address, p->subaddress, p->data);
-	}
-}
-
 void cmdRstI2C(uint8_t argc, char** argv)
 {
-	writeConfig(g_configTablePreEdid);
-	writeEdid(g_edid, sizeof(g_edid));
-	writeConfig(g_configTablePostEdid);
+	adv7611Suspend();
+	// TODO: delay before releasing reset
+	adv7611Resume();
 }

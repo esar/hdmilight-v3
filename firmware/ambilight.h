@@ -73,12 +73,31 @@ uint32_t getfixed_9_9(const char* p);
 int fixed_9_9_fract(int32_t x, int numDigits);
 int fixed_9_9_int(int32_t x);
 
-void i2cInit();
-uint8_t i2cReadAdvRegister(uint8_t addr, uint8_t subaddr);
-uint8_t i2cWriteAdvRegister(uint8_t addr, uint8_t subaddr, uint8_t value);
+void suspend();
+void resume();
 
-void spiInit();
+void clockInit();
 
+void powerInit();
+void powerLEDOff();
+void powerLEDOn();
+void power1V8Off();
+void power1V8On();
+void power1V2Off();
+void power1V2On();
+
+void standbyInit();
+void standbyPoll();
+
+void adv7611Init();
+void adv7611Suspend();
+void adv7611Resume();
+uint8_t adv7611ReadRegister(uint8_t addr, uint8_t subaddr);
+uint8_t adv7611WriteRegister(uint8_t addr, uint8_t subaddr, uint8_t value);
+
+void fpgaInit();
+void fpgaSuspend();
+void fpgaResume();
 void fpgaConfigWrite(uint16_t address, void* data, uint16_t length);
 void fpgaConfigRead(uint16_t address, void* data, uint16_t length);
 void fpgaConfigLoad(uint8_t slot);
@@ -86,11 +105,15 @@ uint8_t fpgaConfigStatus();
 void fpgaFlashRead(uint32_t address, void* data, int length);
 void fpgaFlashWrite(uint32_t address, void* data, int length);
 
-void changeFormat();
+void formatInit();
+void formatSuspend();
+void formatResume();
+void formatChange();
+void formatEnable(int enable);
+void formatGetCurrent(uint16_t* currentWidth, uint16_t* currentHeight, uint16_t* currentRatio);
+char* formatGetRatioName(uint16_t ratio);
 
 void processCecMessage();
-void powerOn();
-void powerOff();
 
 void cmdGetArea(uint8_t argc, char** argv);
 void cmdSetArea(uint8_t argc, char** argv);

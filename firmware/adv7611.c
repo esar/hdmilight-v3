@@ -25,9 +25,47 @@
 #include <core_cm4.h>
 #include "printf.h"
 #include "ambilight.h"
+#include "config_hdmi.h"
+#include "config_edid.h"
+
+#define RESET_ADV7611_PORT   GPIOA
+#define RESET_ADV7611_PIN    8
 
 
-void i2cInit()
+static void adv7611ResetOn()
+{
+	// ADV7611 reset pin is low output (pull down)
+	RESET_ADV7611_PORT->BRR |= 1 << RESET_ADV7611_PIN;
+	RESET_ADV7611_PORT->MODER |= 1 << (RESET_ADV7611_PIN * 2);
+}
+
+static void adv7611ResetOff()
+{
+	// ADV7611 reset pin is input (float high)
+	RESET_ADV7611_PORT->MODER &= ~(3 << (RESET_ADV7611_PIN * 2));
+}
+
+static void adv7611WriteEdid(const char* edid, int length)
+{
+	int i;
+
+	for(i = 0; i < length; ++i)
+		adv7611WriteRegister(0x6c, i, edid[i]);
+}
+
+static void adv7611WriteConfig(const struct ConfigTable* table)
+{
+	const struct ConfigTable* p;
+
+	for(p = table; p->address != 0; ++p)
+	{
+		uint8_t ack = adv7611WriteRegister(p->address, p->subaddress, p->data);
+		if(!silent && !ack)
+			printf("%x %x %x : %s\n", p->address, p->subaddress, p->data, ack ? "ACK" : "NACK");
+	}
+}
+
+void adv7611Init()
 {
 	// Configure pins
 	// PA9  = SCL
@@ -49,7 +87,6 @@ void i2cInit()
 	// Set pin mode to open drain
 	GPIOA->OTYPER |= (1 << 9) | (1 << 10);
 
-		
 	// Enable I2C2 Clock
 	RCC->APB1ENR |= RCC_APB1ENR_I2C2EN;
 
@@ -67,8 +104,23 @@ void i2cInit()
 
 	// Enable I2C2
 	I2C2->CR1 |= I2C_CR1_PE;
-	
+}
 
+void adv7611Suspend()
+{
+	printf("ADV7611 Suspend\n");
+	adv7611ResetOn();
+}
+
+void adv7611Resume()
+{
+	printf("ADV7611 Resuming...");
+	adv7611ResetOff();
+
+	adv7611WriteConfig(g_configTablePreEdid);
+	adv7611WriteEdid(g_edid, sizeof(g_edid));
+	adv7611WriteConfig(g_configTablePostEdid);
+	printf("done.\n");
 }
 
 void i2cStart()
@@ -103,7 +155,7 @@ uint8_t i2cRead()
 	return I2C2->RXDR & 0xff;
 }
 
-uint8_t i2cReadAdvRegister(uint8_t addr, uint8_t subaddr)
+uint8_t adv7611ReadRegister(uint8_t addr, uint8_t subaddr)
 {
 	uint8_t result;
 
@@ -127,7 +179,7 @@ uint8_t i2cReadAdvRegister(uint8_t addr, uint8_t subaddr)
 	return result;	
 }
 
-uint8_t i2cWriteAdvRegister(uint8_t addr, uint8_t subaddr, uint8_t value)
+uint8_t adv7611WriteRegister(uint8_t addr, uint8_t subaddr, uint8_t value)
 {
 	while(I2C2->ISR & I2C_ISR_BUSY)
 		;

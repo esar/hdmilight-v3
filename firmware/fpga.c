@@ -4,9 +4,25 @@
 #include "printf.h"
 #include "spi.h"
 
+#define RESET_FPGA_PORT      GPIOC
+#define RESET_FPGA_PIN       13
 
 
-void spiInit()
+
+static void fpgaResetOn()
+{
+	// FPGA reset pin is low output (pull down)
+	RESET_FPGA_PORT->BRR |= 1 << RESET_FPGA_PIN;
+	RESET_FPGA_PORT->MODER |= 1 << (RESET_FPGA_PIN * 2);
+}
+
+static void fpgaResetOff()
+{
+	// FPGA reset pin is input (float high)
+	RESET_FPGA_PORT->MODER &= ~(3 << (RESET_FPGA_PIN * 2));
+}
+
+void fpgaInit()
 {
 	// Configure pins
 	// PC10 = SPI3_SCLK
@@ -64,9 +80,19 @@ void spiInit()
 	SPI3->CR2 |= SPI_CR2_SSOE | SPI_CR2_FRXTH;
 }
 
-void spiTransaction(void* txBuf1, int txBuf1Len,
-                    void* txBuf2, int txBuf2Len,
-                    void* rxBuf, int rxBufLen)
+void fpgaSuspend()
+{
+	fpgaResetOn();
+}
+
+void fpgaResume()
+{
+	fpgaResetOff();
+}
+
+static void spiTransaction(void* txBuf1, int txBuf1Len,
+                           void* txBuf2, int txBuf2Len,
+                           void* rxBuf, int rxBufLen)
 {
 	volatile uint8_t dummy;
 

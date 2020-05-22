@@ -1,10 +1,13 @@
 OBJS  = main.o         \
         clock.o        \
+        power.o        \
+        standby.o      \
         uart.o         \
         printf.o       \
-        i2c.o          \
-        spi.o          \
+        adv7611.o      \
+        fpga.o         \
         fixed_point.o  \
+        format.o       \
         cmd_area.o     \
         cmd_colour.o   \
         cmd_delay.o    \
@@ -26,7 +29,7 @@ OBJS += system_stm32f3xx.o      \
 
 CMSIS     = ../../STM32Cube_FW_F3_V1.10.0/Drivers/CMSIS/
 
-CFLAGS += -c -fno-common -Os -g -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard -std=gnu99
+CFLAGS += -c -fno-common -Os -g3 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard -std=gnu99
 CFLAGS += -Wall -ffunction-sections -fdata-sections -fno-builtin
 CFLAGS += -Wno-unused-function -ffreestanding
 CFLAGS += -DSTM32F303xE

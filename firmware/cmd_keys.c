@@ -39,18 +39,18 @@ static uint8_t currentAdjust = ADJUST_FIRST;
 
 void adjustUp()
 {
-	uint8_t x = i2cReadAdvRegister(0x44, currentAdjust);
+	uint8_t x = adv7611ReadRegister(0x44, currentAdjust);
 	x = (int16_t)x + 8 > 255 ? 255 : x + 8;
-	i2cWriteAdvRegister(0x44, currentAdjust, x);
+	adv7611WriteRegister(0x44, currentAdjust, x);
 
 	printf("adjust up: %u\n", x);
 }
 
 void adjustDown()
 {
-	uint8_t x = i2cReadAdvRegister(0x44, currentAdjust);
+	uint8_t x = adv7611ReadRegister(0x44, currentAdjust);
 	x = (int16_t)x - 8 < 0 ? 0 : x - 8;
-	i2cWriteAdvRegister(0x44, currentAdjust, x);
+	adv7611WriteRegister(0x44, currentAdjust, x);
 
 	printf("adjust down: %u\n", x);
 }
@@ -69,9 +69,9 @@ void powerOn()
 	uint8_t x;
 
 	// turn off forced free run mode and manual colour selection
-	x = i2cReadAdvRegister(0x44, 0xBF);
+	x = adv7611ReadRegister(0x44, 0xBF);
 	x &= ~5;
-	i2cWriteAdvRegister(0x44, 0xBF, x);
+	adv7611WriteRegister(0x44, 0xBF, x);
 	
 	printf("power on\n");
 }
@@ -81,14 +81,14 @@ void powerOff()
 	uint8_t x;
 
 	// set free run colour to black
-	i2cWriteAdvRegister(0x44, 0xC0, 0);
-	i2cWriteAdvRegister(0x44, 0xC1, 0);
-	i2cWriteAdvRegister(0x44, 0xC2, 0);
+	adv7611WriteRegister(0x44, 0xC0, 0);
+	adv7611WriteRegister(0x44, 0xC1, 0);
+	adv7611WriteRegister(0x44, 0xC2, 0);
 
 	// force free run mode with manual colour selection
-	x = i2cReadAdvRegister(0x44, 0xBF);
+	x = adv7611ReadRegister(0x44, 0xBF);
 	x |= 5;
-	i2cWriteAdvRegister(0x44, 0xBF, x);
+	adv7611WriteRegister(0x44, 0xBF, x);
 
 	printf("power off\n");
 }
@@ -156,14 +156,14 @@ void cmdRstKeys(uint8_t argc, char** argv)
 {
 	uint8_t x;
 
-	i2cWriteAdvRegister(0x80, 0x2A, 0x01);	// power up CEC
-	i2cWriteAdvRegister(0x98, 0x96, 63);	// enable all CEC interrupts on INT1
-	i2cWriteAdvRegister(0x98, 0x94, 63);	// clear all CEC interrupts
-	i2cWriteAdvRegister(0x80, 0x28, 0);        // logical address 0 = 0 (TV)
-	//i2cWriteAdvRegister(0x80, 0x77, 1);	// use all CEC RX buffers
+	adv7611WriteRegister(0x80, 0x2A, 0x01);	// power up CEC
+	adv7611WriteRegister(0x98, 0x96, 63);	// enable all CEC interrupts on INT1
+	adv7611WriteRegister(0x98, 0x94, 63);	// clear all CEC interrupts
+	adv7611WriteRegister(0x80, 0x28, 0);        // logical address 0 = 0 (TV)
+	//adv7611WriteRegister(0x80, 0x77, 1);	// use all CEC RX buffers
 
-	x = i2cReadAdvRegister(0x44, 0x3E);        // enable colour adjustment controls
+	x = adv7611ReadRegister(0x44, 0x3E);        // enable colour adjustment controls
 	x |= 0x80;
-	i2cWriteAdvRegister(0x44, 0x3E, x);
+	adv7611WriteRegister(0x44, 0x3E, x);
 }
 

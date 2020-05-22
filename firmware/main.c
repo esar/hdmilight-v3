@@ -51,36 +51,6 @@ volatile uint8_t g_cecMessageLength;
 int __errno;
 
 
-void idle()
-{
-/*
-#ifdef ENABLE_POWER_SWITCH
-	static uint8_t debounceValue = 0;
-	static uint8_t debounceTicks = 0;
-#endif // ENABLE_POWER_SWITCH
-
-#ifdef ENABLE_POWER_SWITCH
-	if((PIND & (1 << GPIO_POWER_PIN)) == debounceValue)
-	{
-		if(debounceTicks == DEBOUNCE_TICK_COUNT)
-		{
-			if(debounceValue)
-				powerOn();
-			else
-				powerOff();
-			++debounceTicks;
-		}
-		else if(debounceTicks < DEBOUNCE_TICK_COUNT)
-			++debounceTicks;
-	}
-	else
-	{
-		debounceValue = PIND & (1 << GPIO_POWER_PIN);
-		debounceTicks = 0;
-	}
-#endif // ENABLE_POWER_SWITCH
-*/
-}
 
 // Print a section of the ring buffer to stdout, wrapping around when passing the end.
 // Also replacing NULLs with spaces as old commands have had spaces replaced with NULLs
@@ -520,7 +490,7 @@ void EXTI2_TSC_IRQHandler()
 
 	if(interrupts & 1)
 	{
-		uint8_t cecRxIntState = i2cReadAdvRegister(0x98, 0x93);
+		uint8_t cecRxIntState = adv7611ReadRegister(0x98, 0x93);
 
 		// if this is a CEC RX message 0 ready interupt
 		if(cecRxIntState & 8)
@@ -528,17 +498,17 @@ void EXTI2_TSC_IRQHandler()
 			int i;
 
 			// copy the received message
-			g_cecMessageLength = i2cReadAdvRegister(0x80, 0x25);
+			g_cecMessageLength = adv7611ReadRegister(0x80, 0x25);
 			if(g_cecMessageLength > sizeof(g_cecMessage))
 				g_cecMessageLength = sizeof(g_cecMessage);
 			for(i = 0; i < g_cecMessageLength; ++i)
-				g_cecMessage[i] = i2cReadAdvRegister(0x80, 0x15 + i);
+				g_cecMessage[i] = adv7611ReadRegister(0x80, 0x15 + i);
 
 			// clear the message buffer ready for a new message
-			i2cWriteAdvRegister(0x80, 0x2C, 0x02);
+			adv7611WriteRegister(0x80, 0x2C, 0x02);
 
 			// clear the interrupt
-			i2cWriteAdvRegister(0x98, 0x94, 0x08);
+			adv7611WriteRegister(0x98, 0x94, 0x08);
 		}
 	}
 	else if(interrupts & 2)
@@ -568,56 +538,82 @@ void intInit()
 	NVIC_EnableIRQ(EXTI2_TSC_IRQn);
 }
 
+void intSuspend()
+{
+	NVIC_DisableIRQ(EXTI2_TSC_IRQn);
+}
+
+void intResume()
+{
+	NVIC_EnableIRQ(EXTI2_TSC_IRQn);
+}
+
+
+void init()
+{
+	clockInit();
+	powerInit();
+	uartInit(115200);
+	printf("Starting...\n");
+	adv7611Init();
+	fpgaInit();
+	intInit();
+	//posSensorsInit();
+	standbyInit();
+}
+
+void suspend()
+{
+	intSuspend();
+	fpgaSuspend();
+	adv7611Suspend();
+	formatSuspend();
+
+	powerLEDOff();
+	power1V2Off();
+	//power1V8Off();
+}
+
+void resume()
+{
+	power1V8On();
+	power1V2On();
+
+	formatResume();
+	adv7611Resume();
+	fpgaResume();
+
+	intResume();
+
+	// Load FPGA ambilight config
+	//fpgaConfigLoad(0);  // TODO: use correct config
+
+	powerLEDOn();
+}
+
 int main()
 {
-	int i;
-	sensor_angle_set_t* angles;
-
+	//int i;
+	//sensor_angle_set_t* angles;
 
 	char* argv[12];
 	int argc;
 
-	clockInit();
+	init();
 
-	uartInit(115200);
 
-	// Enable LED power
-	RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
-	GPIOC->MODER |= 1 << (1 * 2);
-	GPIOC->BSRR |= 1 << 1;
-
-	printf("Starting...\r\n");
-	
-	// Wait a short while
-	for(i = 0; i < 10000; ++i)
-		asm volatile ("nop");
-
-	intInit();
-
-	i2cInit();
-
-	spiInit();
-
-	posSensorsInit();
-
-#ifdef AUTO_INITIALIZATION
-	//silent = 1;
-	//argv[0] = "R";
-	//cmdRstAll(1, argv);
-	//silent = 0;
-#endif
-
-uint8_t printit=0;
+//uint8_t printit=0;
 
 	printf("Entering main loop\r\n");
 	printf("\n> ");
 	while(1)
 	{
+		standbyPoll();
+
 		if(g_formatChanged)
 		{
 			g_formatChanged = 0;
-			printf("format changed\n");
-			changeFormat();
+			formatChange();
 		}
 
 		if(g_cecMessageLength != 0)
@@ -633,18 +629,19 @@ uint8_t printit=0;
 			printf("\n");
 			dispatchCommand(argc, argv);
 			printf("\n> ");
-printit=1;
+//printit=1;
 		}
 
+/*
 		if((angles = posSensorsPoll()))
 		{
-/*
+/-*
 printf("angles0: %f %f %f %f\n", (*angles)[0][0][0], (*angles)[0][0][1], (*angles)[0][1][0], (*angles)[0][1][1]);
 printf("angles1: %f %f %f %f\n", (*angles)[1][0][0], (*angles)[1][0][1], (*angles)[1][1][0], (*angles)[1][1][1]);
 printf("angles2: %f %f %f %f\n", (*angles)[2][0][0], (*angles)[2][0][1], (*angles)[2][1][0], (*angles)[2][1][1]);
 printf("angles3: %f %f %f %f\n", (*angles)[3][0][0], (*angles)[3][0][1], (*angles)[3][1][0], (*angles)[3][1][1]);
 printf("\n");
-*/
+*-/
 //printf("got angles\n");
 			ootx_msg_t* ootx = posSensorsGetOotx();
 			if(ootx)
@@ -693,6 +690,7 @@ printit=0;
 			}
 
 		}
+*/
 	}
 }
 
