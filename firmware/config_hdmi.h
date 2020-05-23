@@ -52,7 +52,8 @@ static const struct ConfigTable g_configTablePostEdid[] =
 	{ 0x64, 0x70, 0x9E },  // Set the Least Significant Byte of the SPA location
 	{ 0x64, 0x74, 0x03 },  // Enable the Internal EDID for Ports
 
-	{ 0x98, 0x01, 0x06 },  // Prim_Mode =110b HDMI-GR
+	{ 0x98, 0x00, 0x1E },  // VID_STD = 1920x1080
+	{ 0x98, 0x01, 0x05 },  // Prim_Mode =101b HDMI-COMP
 	{ 0x98, 0x02, 0xF2 },  // Auto CSC, YCrCb out, Set op_656 bit
 	{ 0x98, 0x03, 0x40 },  // 24 bit SDR 444 Mode 0 
 	{ 0x98, 0x05, 0x28 },  // AV Codes Off

@@ -36,41 +36,38 @@
 
 void powerLEDOn()
 {
-	// LED pin is input (float high)
-	POWER_LED_PORT->MODER &= ~(3 << (POWER_LED_PIN * 2));
+	// LED pin output high
+	POWER_LED_PORT->BSRR |= 1 << POWER_LED_PIN;
 }
 
 void powerLEDOff()
 {
-	// LED pin is low output (pull down)
+	// LED pin output low
 	POWER_LED_PORT->BRR |= 1 << POWER_LED_PIN;
-	POWER_LED_PORT->MODER |= 1 << (POWER_LED_PIN * 2);
 }
 
 void power1V8On()
 {
-	// 1V8 pin is input (float high)
-	POWER_1V8_PORT->MODER &= ~(3 << (POWER_1V8_PIN * 2));
+	// 1V8 pin output high
+	POWER_1V8_PORT->BSRR |= 1 << POWER_1V8_PIN;
 }
 
 void power1V8Off()
 {
-	// 1V8 pin is low output (pull down)
+	// 1V8 pin output low
 	POWER_1V8_PORT->BRR |= 1 << POWER_1V8_PIN;
-	POWER_1V8_PORT->MODER |= 1 << (POWER_1V8_PIN * 2);
 }
 
 void power1V2On()
 {
-	// 1V2 pin is input (float high)
-	POWER_1V2_PORT->MODER &= ~(3 << (POWER_1V2_PIN * 2));
+	// 1V2 pin output high
+	POWER_1V2_PORT->BSRR |= 1 << POWER_1V2_PIN;
 }
 
 void power1V2Off()
 {
-	// 1V2 pin is low output (pull down)
+	// 1V2 pin output low
 	POWER_1V2_PORT->BRR |= 1 << POWER_1V2_PIN;
-	POWER_1V2_PORT->MODER |= 1 << (POWER_1V2_PIN * 2);
 }
 
 void powerInit()
@@ -78,9 +75,17 @@ void powerInit()
 	// Enable GPIOC
 	RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
 
-	// Set power pins to input (float high)
-	POWER_LED_PORT->MODER &= ~(3 << (POWER_LED_PIN * 2));
-	POWER_1V8_PORT->MODER &= ~(3 << (POWER_1V8_PIN * 2));
-	POWER_1V2_PORT->MODER &= ~(3 << (POWER_1V2_PIN * 2));
+	// Set LED power to output low
+	POWER_LED_PORT->BRR   |= 1 << POWER_LED_PIN;
+	POWER_LED_PORT->MODER |= 1 << (POWER_LED_PIN * 2);
+
+	// Set vreg power pins to open-drain output high
+	POWER_1V8_PORT->OTYPER |= 1 << POWER_1V8_PIN;
+	POWER_1V8_PORT->BSRR   |= 1 << POWER_1V8_PIN;
+	POWER_1V8_PORT->MODER  |= 1 << (POWER_1V8_PIN * 2);
+
+	POWER_1V2_PORT->OTYPER |= 1 << POWER_1V2_PIN;
+	POWER_1V2_PORT->BSRR   |= 1 << POWER_1V2_PIN;
+	POWER_1V2_PORT->MODER  |= 1 << (POWER_1V2_PIN * 2);
 }
 
