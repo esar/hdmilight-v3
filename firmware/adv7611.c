@@ -123,21 +123,21 @@ void adv7611Resume()
 	printf("done.\n");
 }
 
-void i2cStart()
+static void i2cStart()
 {
 	I2C2->CR2 |= I2C_CR2_START;
 	while(I2C2->CR2 & I2C_CR2_START)
 		;
 }
 
-void i2cStop()
+static void i2cStop()
 {
 	I2C2->CR2 |= I2C_CR2_STOP;
 	while(I2C2->ISR & I2C_CR2_STOP)
 		;
 }
 
-void i2cWrite(uint8_t x)
+static void i2cWrite(uint8_t x)
 {
 	while(!(I2C2->ISR & I2C_ISR_TXIS))
 		;
@@ -148,7 +148,7 @@ void i2cWrite(uint8_t x)
 		;
 }
 
-uint8_t i2cRead()
+static uint8_t i2cRead()
 {
 	while(!(I2C2->ISR & I2C_ISR_RXNE))
 		;
@@ -158,6 +158,9 @@ uint8_t i2cRead()
 uint8_t adv7611ReadRegister(uint8_t addr, uint8_t subaddr)
 {
 	uint8_t result;
+
+	// Disable interrupts that might use this I2C controller
+	__set_BASEPRI(INT_PRIORITY_DEVICE_COMMS << 4);
 
 	while(I2C2->ISR & I2C_ISR_BUSY)
 		;
@@ -176,11 +179,18 @@ uint8_t adv7611ReadRegister(uint8_t addr, uint8_t subaddr)
 
 	i2cStop();
 
+	__set_BASEPRI(0);
+
 	return result;	
 }
 
 uint8_t adv7611WriteRegister(uint8_t addr, uint8_t subaddr, uint8_t value)
 {
+	uint8_t result;
+
+	// Disable interrupts that might use this I2C controller
+	__set_BASEPRI(INT_PRIORITY_DEVICE_COMMS << 4);
+
 	while(I2C2->ISR & I2C_ISR_BUSY)
 		;
 
@@ -193,9 +203,10 @@ uint8_t adv7611WriteRegister(uint8_t addr, uint8_t subaddr, uint8_t value)
 	i2cWrite(value);
 	i2cStop();
 
-	if(I2C2->ISR & I2C_ISR_NACKF)
-		return 0;
-	else
-		return 1;
+	result = (I2C2->ISR & I2C_ISR_NACKF) ? 0 : 1;
+
+	__set_BASEPRI(0);
+
+	return result;
 }
 

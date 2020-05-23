@@ -9,7 +9,7 @@ volatile uint32_t g_ticks = 0;
 
 void SysTick_Handler()
 {
-	g_ticks += 1;
+	g_ticks += 10;
 }
 
 void clockInit()
@@ -42,4 +42,9 @@ void clockInit()
 	SystemCoreClockUpdate();
 	SysTick_Config(SystemCoreClock / 100);
 	__enable_irq();
+}
+
+uint32_t clockGetTicks()
+{
+	return g_ticks;
 }

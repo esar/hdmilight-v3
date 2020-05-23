@@ -183,7 +183,6 @@ char pollCommand(char** argv, char maxargs)
 					for(i = 0; i < history + 1; ++i)
 					{
 						len = cmdbuf[p];
-printf("len: %d\n", len);
 						if(len == 0)
 							break;
 						p -= len;
@@ -480,11 +479,24 @@ void dispatchCommand(int argc, char** argv)
 
 }
 
-int trig = 0;
+__STATIC_INLINE uint32_t NVIC_GetEnableIRQ(IRQn_Type IRQn)
+{
+	if ((int32_t)(IRQn) >= 0)
+	{
+		return((uint32_t)(((NVIC->ISER[(((uint32_t)(int32_t)IRQn) >> 5UL)] & (1UL << (((uint32_t)(int32_t)IRQn) & 0x1FUL))) != 0UL) ? 1UL : 0UL));
+	}
+	else
+	{
+		return(0U);
+	}
+}
+
 void EXTI2_TSC_IRQHandler()
 {
 	uint8_t interrupts;
-	uint16_t clear = 0xff;
+	uint8_t clear = 0xff;
+
+	EXTI->PR |= EXTI_PR_PR2;
 
 	fpgaConfigRead(AMBILIGHT_BASE_ADDR_INTERRUPT, &interrupts, sizeof(interrupts));
 
@@ -517,7 +529,21 @@ void EXTI2_TSC_IRQHandler()
 	}
 
 	fpgaConfigWrite(AMBILIGHT_BASE_ADDR_INTERRUPT, &clear, sizeof(clear));
-	EXTI->PR |= EXTI_PR_PR2;
+}
+
+void intPoll()
+{
+	uint8_t interrupts;
+
+	fpgaConfigRead(AMBILIGHT_BASE_ADDR_INTERRUPT, &interrupts, sizeof(interrupts));
+
+	if(NVIC_GetEnableIRQ(EXTI2_TSC_IRQn) &&   // interrupt enabled
+	   !(EXTI->PR & EXTI_PR_PR2) &&           // interrupt not pending
+	   interrupts != 0xff &&                  // FPGA responding (bitstream loaded)
+	   (interrupts & 0x0F))                   // FPGA indicating interrupt pending
+	{
+		EXTI2_TSC_IRQHandler();	
+	}
 }
 
 void intInit()
@@ -534,7 +560,7 @@ void intInit()
 	EXTI->RTSR |= EXTI_RTSR_TR2;    // enable rising edge
 	EXTI->FTSR &= ~EXTI_FTSR_TR2;   // disable falling edge
 
-	NVIC_SetPriority(EXTI2_TSC_IRQn, 0x03);
+	NVIC_SetPriority(EXTI2_TSC_IRQn, INT_PRIORITY_DEVICE_COMMS);
 	NVIC_EnableIRQ(EXTI2_TSC_IRQn);
 }
 
@@ -598,6 +624,7 @@ int main()
 
 	char* argv[12];
 	int argc;
+	uint32_t lastTime = 0;
 
 	init();
 
@@ -609,6 +636,14 @@ int main()
 	while(1)
 	{
 		standbyPoll();
+
+		// STM32 doesn't support level triggered interrupts
+		// Check for any missed rising edges every 250ms
+		if(lastTime + 250 < clockGetTicks())
+		{
+			lastTime = clockGetTicks();
+			intPoll();
+		}
 
 		if(g_formatChanged)
 		{

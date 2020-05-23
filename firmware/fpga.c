@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stm32f303xe.h>
 #include <core_cm4.h>
+#include "ambilight.h"
 #include "printf.h"
 #include "spi.h"
 
@@ -165,27 +166,44 @@ static void spiTransaction(void* txBuf1, int txBuf1Len,
 void fpgaConfigWrite(uint16_t address, void* data, uint16_t length)
 {
 	uint8_t command[] = { 0x02, address >> 8, address & 0xff };
+
+	// Disable interrupts that might use this SPI controller
+	__set_BASEPRI(INT_PRIORITY_DEVICE_COMMS << 4);
 	spiTransaction(command, sizeof(command), data, length, NULL, 0);
+	__set_BASEPRI(0);
 }
 
 void fpgaConfigRead(uint16_t address, void* data, uint16_t length)
 {
 	uint8_t command[] = { 0x01, address >> 8, address & 0xff, 0 };
+
+	// Disable interrupts that might use this SPI controller
+	__set_BASEPRI(INT_PRIORITY_DEVICE_COMMS << 4);
 	spiTransaction(command, sizeof(command), NULL, 0, data, length);
+	__set_BASEPRI(0);
 }
 
 void fpgaConfigLoad(uint8_t slot)
 {
 	// TODO: Why does this need the last three bytes (1, 1, 0) ?
 	uint8_t command[] = { 0xa0, slot + 1, 1, 1, 0 };
+
+	// Disable interrupts that might use this SPI controller
+	__set_BASEPRI(INT_PRIORITY_DEVICE_COMMS << 4);
 	spiTransaction(command, sizeof(command), NULL, 0, NULL, 0);
+	__set_BASEPRI(0);
 }
 
 uint8_t fpgaConfigStatus()
 {
 	uint8_t status;
 	uint8_t command[] = { 0xa2, 0 };
+
+	// Disable interrupts that might use this SPI controller
+	__set_BASEPRI(INT_PRIORITY_DEVICE_COMMS << 4);
 	spiTransaction(command, sizeof(command), NULL, 0, &status, sizeof(status));
+	__set_BASEPRI(0);
+
 	return status;
 }
 
@@ -193,8 +211,12 @@ void fpgaFlashRead(uint32_t address, void* data, int length)
 {
 	uint8_t passthru_command[] = { 0xb0, 0 };
 	uint8_t command[] = { 0x03, (address >> 16) & 0xff, (address >> 8) & 0xff, address & 0xff };
+
+	// Disable interrupts that might use this SPI controller
+	__set_BASEPRI(INT_PRIORITY_DEVICE_COMMS << 4);
 	spiTransaction(passthru_command, sizeof(passthru_command), NULL, 0, NULL, 0);
 	spiTransaction(command, sizeof(command), NULL, 0, data, length);
+	__set_BASEPRI(0);
 }
 
 void fpgaFlashWrite(uint32_t address, void* data, int length)

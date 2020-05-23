@@ -58,6 +58,8 @@
 #define ACTION_ADJUST_SATURATION 18
 #define ACTION_ADJUST_HUE        19
 
+#define INT_PRIORITY_DEVICE_COMMS    4    /* IRQs that communicate with FPGA or ADV7611 */
+
 
 extern uint8_t silent;
 extern volatile uint8_t g_formatChanged;
@@ -77,6 +79,7 @@ void suspend();
 void resume();
 
 void clockInit();
+uint32_t clockGetTicks();
 
 void powerInit();
 void powerLEDOff();
