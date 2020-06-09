@@ -1,5 +1,3 @@
-WARNING: This version is incomplete
-
 This is a still-in-progress update to my hdmilight-v2 project.
 
 Differences in this version:
@@ -37,17 +35,11 @@ Build instructions:
     (running "dmesg" is useful to see names of recently added serial ports)
  10) Connect HDMI source to receiver board
  11) It should now be working. 
-     **** ACTUALLY NOT! This project isn't finished yet! ****
 
 
 
-The following functionality that works in v2 is known not to work here:
- 1) Automatic config switching when source aspect ratio changes.
-    Config must currently be manually loaded via GM serial command
-    For example, to load config 0: GM 0
- 2) CEC remote control key presses
- 3) Many other things that I haven't found yet
-
+This version should now have feature parity with version 2, however
+it has not been tested very well yet.
 
 
 
