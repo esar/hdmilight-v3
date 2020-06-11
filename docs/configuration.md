@@ -47,7 +47,8 @@ aspect ratio. Each line has four columns:
 
 For example, this file defines three known formats for the three different aspect
 ratios for 1920x1080
-```# width  height  ratio  config
+```
+# width  height  ratio  config
   1920   1080    1.77   0
   1920   1080    2.40   1
   1920   1080    1.33   2
@@ -81,7 +82,7 @@ The first four columns should be fairly self explanatory, they just define the
 coordinates of the rectangle. These coordinates use a reduced resolution compared
 to the incoming video. The incoming video is scaled by 32, so for 1920x1080 the
 coordinates in this are 0-59 for X, and 0-32 for Y.
-The origin is the bottom left of the screen.
+The origin is the top left of the screen.
 
 The last parameter is harder to explain. Especially if you're not familiar with how 
 binary numbers operate. The averaging of the pixel colours in the rectangle is done
@@ -156,7 +157,8 @@ colour.conf
 The colour configuration files define a colour matrix that can be used to colour correct
 individual LEDs. A default do-nothing configuration file looks like this:
 
-```matrixR = 1.000 0.000 0.000
+```
+matrixR = 1.000 0.000 0.000
 matrixG = 0.000 1.000 0.000
 matrixB = 0.000 0.000 1.000
 matrixC = 0.000 0.000 0.000
